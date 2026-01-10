@@ -26,7 +26,40 @@ phaser-platformer/
 - PostgreSQL (optional, for persistence)
 - Redis (optional, for caching)
 
-### Installation
+### Quick Setup Script
+
+A comprehensive setup script is provided to automate environment preparation, dependency resolution, database creation, and configuration.
+
+Run the script from the project root:
+
+```bash
+./scripts/setup.sh
+```
+
+Options:
+- `--skip-deps` – Skip dependency installation (useful if you already have them)
+- `--skip-db` – Skip PostgreSQL setup
+- `--skip-redis` – Skip Redis installation
+- `--skip-build` – Skip building the project
+
+The script will:
+1. Fix known dependency issues (ajv, schema-utils, webpack compatibility)
+2. Install PostgreSQL and Redis (if not present) and start services
+3. Create the `phaser_platformer` database and user
+4. Generate environment configuration files (`.env` in client and server)
+5. Install all dependencies (root, client, server, shared)
+6. Build the project (TypeScript compilation, webpack bundling)
+7. Run database migrations
+
+After running the script, you can start development with:
+
+```bash
+npm run dev
+```
+
+### Manual Installation
+
+If you prefer manual setup:
 
 1. Clone the repository.
 2. Install root dependencies:
