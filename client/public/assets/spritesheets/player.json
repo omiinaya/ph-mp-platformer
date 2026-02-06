@@ -1,0 +1,26 @@
+{
+  "frameWidth": 32,
+  "frameHeight": 32,
+  "animations": {
+    "idle": {
+      "start": 0,
+      "end": 7,
+      "frameRate": 10
+    },
+    "walk": {
+      "start": 8,
+      "end": 15,
+      "frameRate": 10
+    },
+    "jump": {
+      "start": 16,
+      "end": 19,
+      "frameRate": 10
+    },
+    "attack": {
+      "start": 20,
+      "end": 25,
+      "frameRate": 12
+    }
+  }
+}

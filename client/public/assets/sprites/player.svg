@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- Player body -->
+  <rect x="8" y="4" width="16" height="20" fill="#3498db" rx="2"/>
+  <!-- Head -->
+  <circle cx="16" cy="8" r="6" fill="#f1c40f"/>
+  <!-- Eyes -->
+  <circle cx="14" cy="7" r="1.5" fill="#2c3e50"/>
+  <circle cx="18" cy="7" r="1.5" fill="#2c3e50"/>
+  <!-- Arms -->
+  <rect x="4" y="10" width="4" height="12" fill="#e74c3c" rx="1"/>
+  <rect x="24" y="10" width="4" height="12" fill="#e74c3c" rx="1"/>
+  <!-- Legs -->
+  <rect x="10" y="24" width="5" height="8" fill="#34495e" rx="1"/>
+  <rect x="17" y="24" width="5" height="8" fill="#34495e" rx="1"/>
+</svg>

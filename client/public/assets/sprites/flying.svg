@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- Wings -->
+  <ellipse cx="8" cy="12" rx="8" ry="4" fill="#9b59b6" transform="rotate(-20 8 12)"/>
+  <ellipse cx="24" cy="12" rx="8" ry="4" fill="#9b59b6" transform="rotate(20 24 12)"/>
+  <!-- Body -->
+  <ellipse cx="16" cy="16" rx="6" ry="8" fill="#8e44ad"/>
+  <!-- Head -->
+  <circle cx="16" cy="10" r="5" fill="#9b59b6"/>
+  <!-- Eyes -->
+  <circle cx="14" cy="9" r="1.5" fill="#e74c3c"/>
+  <circle cx="18" cy="9" r="1.5" fill="#e74c3c"/>
+  <!-- Beak -->
+  <polygon points="16,11 14,14 18,14" fill="#f39c12"/>
+</svg>

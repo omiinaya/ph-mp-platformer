@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: phaser-platformer
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - postgres.yaml
+  - redis.yaml
+  - server.yaml
+  - client.yaml
+
+commonLabels:
+  app.kubernetes.io/name: phaser-platformer
+  app.kubernetes.io/version: "1.0.0"
+  app.kubernetes.io/managed-by: kubectl
+
+images:
+  - name: phaser-platformer-server
+    newTag: latest
+  - name: phaser-platformer-client
+    newTag: latest

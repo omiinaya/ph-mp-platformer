@@ -1,0 +1,23 @@
+# Copy this file to terraform.tfvars and update the values
+
+project_name = "phaser-platformer"
+environment  = "development"
+aws_region   = "us-east-1"
+
+# Database
+# db_password = "your-secure-password-here"
+
+# Domain (optional)
+# domain_name = "your-domain.com"
+
+# EKS Node Configuration
+node_desired_size = 2
+node_min_size     = 1
+node_max_size     = 4
+node_instance_types = ["t3.medium"]
+
+# RDS Configuration
+db_instance_class = "db.t3.micro"
+
+# ElastiCache Configuration
+redis_node_type = "cache.t3.micro"

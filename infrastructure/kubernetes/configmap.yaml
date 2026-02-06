@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: phaser-platformer-config
+  namespace: phaser-platformer
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  DB_PORT: "5432"
+  REDIS_PORT: "6379"
+  CORS_ORIGIN: "*"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: phaser-platformer-secrets
+  namespace: phaser-platformer
+type: Opaque
+stringData:
+  DB_USER: "postgres"
+  DB_PASSWORD: "changeme-in-production"
+  DB_NAME: "phaser_platformer"
+  JWT_SECRET: "your-secret-key-change-in-production"
+  REDIS_HOST: "redis-service"

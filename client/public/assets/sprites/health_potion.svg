@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- Bottle -->
+  <rect x="10" y="12" width="12" height="16" fill="#c0392b" rx="2" opacity="0.8"/>
+  <!-- Bottle neck -->
+  <rect x="12" y="8" width="8" height="4" fill="#8e44ad"/>
+  <!-- Cork -->
+  <rect x="11" y="6" width="10" height="4" fill="#d35400"/>
+  <!-- Label/Heart -->
+  <path d="M 16 20 C 14 18, 12 18, 12 20 C 12 22, 16 26, 16 26 C 16 26, 20 22, 20 20 C 20 18, 18 18, 16 20" fill="#e74c3c"/>
+  <!-- Shine -->
+  <rect x="12" y="14" width="2" height="8" fill="#fff" opacity="0.3" rx="1"/>
+</svg>

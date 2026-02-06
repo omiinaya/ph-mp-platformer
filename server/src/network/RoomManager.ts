@@ -1,6 +1,32 @@
-import { Server } from 'socket.io';
-import { ConnectionManager } from './ConnectionManager';
-import { logger } from '../utils/logger';
+import { Server } from "socket.io";
+import { ConnectionManager } from "./ConnectionManager";
+import { logger } from "../utils/logger";
+
+/**
+ * Game state structure for a room.
+ */
+export interface GameState {
+  roomId: string;
+  startedAt: Date;
+  players: Array<{
+    playerId: string;
+    position: { x: number; y: number };
+    velocity: { x: number; y: number };
+    health: number;
+    score: number;
+    isAlive: boolean;
+  }>;
+  entities: Array<{
+    entityId: string;
+    type: string;
+    position: { x: number; y: number };
+    active: boolean;
+  }>;
+  gameMode: string;
+  isActive: boolean;
+  startTime: number;
+  elapsedTime: number;
+}
 
 /**
  * Represents a game room.
@@ -15,7 +41,7 @@ export interface Room {
   }>;
   createdAt: Date;
   isActive: boolean;
-  gameState?: any; // TODO: define proper game state type
+  gameState?: GameState;
 }
 
 /**
@@ -40,7 +66,7 @@ export class RoomManager {
       gameMode: string;
       maxPlayers?: number;
       players: Array<{ playerId: string; socketId: string }>;
-    }
+    },
   ): Room {
     const room: Room = {
       roomId,
@@ -55,7 +81,7 @@ export class RoomManager {
     logger.info(`Room created: ${roomId} (${options.players.length} players)`);
 
     // Notify all players in room
-    this.io.to(roomId).emit('room_created', {
+    this.io.to(roomId).emit("room_created", {
       roomId,
       gameMode: room.gameMode,
       players: room.players,
@@ -74,7 +100,11 @@ export class RoomManager {
   /**
    * Add a player to an existing room.
    */
-  public addPlayer(roomId: string, playerId: string, socketId: string): boolean {
+  public addPlayer(
+    roomId: string,
+    playerId: string,
+    socketId: string,
+  ): boolean {
     const room = this.rooms.get(roomId);
     if (!room || !room.isActive) {
       logger.warn(`Cannot add player to inactive or missing room ${roomId}`);
@@ -93,7 +123,7 @@ export class RoomManager {
     this.connectionManager.assignRoom(socketId, roomId);
 
     // Notify room
-    this.io.to(roomId).emit('player_joined_room', {
+    this.io.to(roomId).emit("player_joined_room", {
       playerId,
       socketId,
       roomId,
@@ -120,7 +150,7 @@ export class RoomManager {
       }
 
       // Notify room
-      this.io.to(roomId).emit('player_left_room', {
+      this.io.to(roomId).emit("player_left_room", {
         playerId,
         roomId,
       });
@@ -144,7 +174,7 @@ export class RoomManager {
     if (!room || !room.isActive) return false;
 
     room.isActive = false;
-    this.io.to(roomId).emit('room_paused', { roomId });
+    this.io.to(roomId).emit("room_paused", { roomId });
     logger.info(`Room paused: ${roomId}`);
     return true;
   }
@@ -157,7 +187,7 @@ export class RoomManager {
     if (!room || room.isActive) return false;
 
     room.isActive = true;
-    this.io.to(roomId).emit('room_resumed', { roomId });
+    this.io.to(roomId).emit("room_resumed", { roomId });
     logger.info(`Room resumed: ${roomId}`);
     return true;
   }
@@ -170,9 +200,9 @@ export class RoomManager {
     if (!room) return false;
 
     // Notify all players
-    this.io.to(roomId).emit('room_ended', {
+    this.io.to(roomId).emit("room_ended", {
       roomId,
-      reason: 'game_over',
+      reason: "game_over",
     });
 
     // Kick all players out
@@ -209,7 +239,7 @@ export class RoomManager {
    */
   public getRoomsForPlayer(playerId: string): Room[] {
     return Array.from(this.rooms.values()).filter((room) =>
-      room.players.some((p) => p.playerId === playerId)
+      room.players.some((p) => p.playerId === playerId),
     );
   }
 

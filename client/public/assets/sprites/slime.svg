@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- Slime body -->
+  <ellipse cx="16" cy="22" rx="14" ry="8" fill="#2ecc71"/>
+  <!-- Slime top -->
+  <ellipse cx="16" cy="18" rx="10" ry="6" fill="#27ae60"/>
+  <!-- Eyes -->
+  <circle cx="12" cy="18" r="2" fill="#fff"/>
+  <circle cx="20" cy="18" r="2" fill="#fff"/>
+  <circle cx="12" cy="18" r="1" fill="#2c3e50"/>
+  <circle cx="20" cy="18" r="1" fill="#2c3e50"/>
+  <!-- Mouth -->
+  <path d="M 14 22 Q 16 24 18 22" stroke="#2c3e50" stroke-width="1" fill="none"/>
+</svg>

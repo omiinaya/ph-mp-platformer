@@ -1,6 +1,6 @@
-import { Server } from 'socket.io';
-import { RoomManager } from './RoomManager';
-import { logger } from '../utils/logger';
+import { Server } from "socket.io";
+import { RoomManager } from "./RoomManager";
+import { logger } from "../utils/logger";
 
 /**
  * Represents a game state snapshot.
@@ -62,7 +62,7 @@ export class GameSync {
     if (this.tickInterval) {
       clearInterval(this.tickInterval);
       this.tickInterval = null;
-      logger.info('GameSync stopped');
+      logger.info("GameSync stopped");
     }
   }
 
@@ -79,16 +79,116 @@ export class GameSync {
 
   /**
    * Update the authoritative game state for a room.
-   * This would integrate player inputs, apply game logic, etc.
+   * This integrates player inputs, applies game logic, physics, etc.
    */
   private updateRoomState(roomId: string): void {
-    // Placeholder: in a real implementation, you would process pending inputs,
-    // run physics, resolve collisions, etc.
-    const currentState = this.roomStates.get(roomId) || this.createEmptyState(roomId);
-    // Simulate some change
-    currentState.timestamp = Date.now();
-    // TODO: apply game logic
+    const currentState =
+      this.roomStates.get(roomId) || this.createEmptyState(roomId);
+    const now = Date.now();
+    const deltaTime = (now - currentState.timestamp) / 1000; // seconds
+    currentState.timestamp = now;
+
+    // Apply game logic to each entity
+    for (const [entityId, entity] of Object.entries(currentState.entities)) {
+      if (!entity) continue;
+
+      // Apply physics simulation
+      if (entity.velocity) {
+        // Update position based on velocity
+        if (entity.position) {
+          entity.position.x += (entity.velocity.x || 0) * deltaTime;
+          entity.position.y += (entity.velocity.y || 0) * deltaTime;
+        }
+
+        // Apply gravity for falling entities
+        if (entity.affectedByGravity && entity.velocity.y !== undefined) {
+          entity.velocity.y += 9.8 * deltaTime; // gravity acceleration
+        }
+      }
+
+      // Check for out of bounds
+      if (entity.position) {
+        if (entity.position.y > 1000) {
+          // Entity fell off the world
+          delete currentState.entities[entityId];
+          currentState.events.push({
+            type: "entity_destroyed",
+            entityId,
+            reason: "out_of_bounds",
+            timestamp: now,
+          });
+          continue;
+        }
+      }
+
+      // Update last processed time
+      entity.lastUpdated = now;
+    }
+
+    // Process events (inputs, collisions, etc.)
+    const eventsToProcess = [...currentState.events];
+    currentState.events = [];
+
+    for (const event of eventsToProcess) {
+      this.processGameEvent(currentState, event);
+    }
+
     this.roomStates.set(roomId, currentState);
+  }
+
+  /**
+   * Process a game event and update state accordingly.
+   */
+  private processGameEvent(state: GameStateSnapshot, event: any): void {
+    switch (event.type) {
+      case "player_input": {
+        const entity = state.entities[event.playerId];
+        if (entity) {
+          // Apply player movement
+          if (event.input.moveX !== undefined) {
+            entity.velocity = entity.velocity || { x: 0, y: 0 };
+            entity.velocity.x = event.input.moveX * 200; // movement speed
+          }
+          if (event.input.jump && entity.isOnGround) {
+            entity.velocity = entity.velocity || { x: 0, y: 0 };
+            entity.velocity.y = -400; // jump force
+            entity.isOnGround = false;
+          }
+        }
+        break;
+      }
+
+      case "collision": {
+        // Handle collision between entities
+        const entity1 = state.entities[event.entityId1];
+        const entity2 = state.entities[event.entityId2];
+        if (entity1 && entity2) {
+          // Apply collision response
+          if (event.damage) {
+            entity2.health = (entity2.health || 100) - event.damage;
+            if (entity2.health <= 0) {
+              state.events.push({
+                type: "entity_destroyed",
+                entityId: event.entityId2,
+                reason: "destroyed",
+                timestamp: Date.now(),
+              });
+            }
+          }
+        }
+        break;
+      }
+
+      case "entity_destroyed": {
+        // Entity was destroyed, remove from state
+        delete state.entities[event.entityId];
+        break;
+      }
+
+      default:
+        // Unknown event type, log for debugging
+        logger.debug(`Unknown game event type: ${event.type}`);
+    }
   }
 
   /**
@@ -128,7 +228,10 @@ export class GameSync {
     // Check for modifications or additions
     for (const [id, entity] of Object.entries(current.entities)) {
       const prevEntity = previous.entities[id];
-      if (!prevEntity || JSON.stringify(prevEntity) !== JSON.stringify(entity)) {
+      if (
+        !prevEntity ||
+        JSON.stringify(prevEntity) !== JSON.stringify(entity)
+      ) {
         changedEntities[id] = entity;
       }
     }
@@ -141,7 +244,8 @@ export class GameSync {
     }
 
     // If delta is larger than a threshold, send full snapshot
-    const deltaSize = Object.keys(changedEntities).length + deletedEntities.length;
+    const deltaSize =
+      Object.keys(changedEntities).length + deletedEntities.length;
     const totalEntities = Object.keys(current.entities).length;
     if (deltaSize > totalEntities * 0.5) {
       // Delta is large, send full snapshot
@@ -175,7 +279,7 @@ export class GameSync {
    */
   private broadcastState(roomId: string): void {
     const delta = this.computeDelta(roomId);
-    this.io.to(roomId).emit('game_state_update', delta);
+    this.io.to(roomId).emit("game_state_update", delta);
 
     // Optional: log bandwidth usage
     logger.debug(`Broadcast state for room ${roomId} (full: ${delta.full})`);
@@ -197,11 +301,7 @@ export class GameSync {
    * Apply player input to the game state.
    * Called when a 'player_input' event is received.
    */
-  public applyPlayerInput(
-    roomId: string,
-    playerId: string,
-    input: any
-  ): void {
+  public applyPlayerInput(roomId: string, playerId: string, input: any): void {
     const state = this.roomStates.get(roomId);
     if (!state) return;
 
@@ -221,7 +321,7 @@ export class GameSync {
 
     // You could also add to an event queue for processing in the next tick
     state.events.push({
-      type: 'player_input',
+      type: "player_input",
       playerId,
       input,
       timestamp: Date.now(),
@@ -235,7 +335,7 @@ export class GameSync {
    */
   private validateInput(input: any): boolean {
     // Basic validation: ensure required fields, within bounds, etc.
-    if (!input || typeof input !== 'object') return false;
+    if (!input || typeof input !== "object") return false;
     // Add more checks as needed
     return true;
   }
