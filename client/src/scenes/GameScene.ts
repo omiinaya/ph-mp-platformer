@@ -15,8 +15,13 @@ import { Minimap } from "../core/Minimap";
 import {
   PerformanceMonitor,
   startPerformanceMonitoring,
+  stopPerformanceMonitoring,
 } from "../core/PerformanceMonitor";
-import { MemoryTracker, enableMemoryTracking } from "../core/MemoryTracker";
+import {
+  MemoryTracker,
+  enableMemoryTracking,
+  disableMemoryTracking,
+} from "../core/MemoryTracker";
 import {
   ErrorHandler,
   initErrorHandler,
@@ -103,6 +108,19 @@ export class GameScene extends Scene {
   private performanceDisplay?: Phaser.GameObjects.Text;
   private lastPerformanceUpdate: number = 0;
   private errorHandler: ErrorHandler;
+
+  // Minimap cache to avoid creating arrays every frame
+  private minimapCache: {
+    enemies: { x: number; y: number; id: string; active: boolean }[];
+    items: { x: number; y: number; id: string; active: boolean }[];
+    dirty: boolean;
+    lastUpdate: number;
+  } = {
+    enemies: [],
+    items: [],
+    dirty: true,
+    lastUpdate: 0,
+  };
 
   constructor() {
     super({ key: "GameScene" });
@@ -794,30 +812,51 @@ export class GameScene extends Scene {
     // Update performance monitoring
     this.updatePerformanceMonitoring(delta);
 
-    // Update minimap
+    // Update minimap (cached to avoid creating arrays every frame)
     if (this.minimap) {
       const playerData = {
         x: this.player.x,
         y: this.player.y,
         id: this.player.sessionId || "local",
       };
-      const enemiesData = this.enemies
-        .filter((e) => e.active !== false)
-        .map((e) => ({
-          x: e.x,
-          y: e.y,
-          id: `enemy_${e.x}_${e.y}`,
-          active: true,
-        }));
-      const itemsData = this.items
-        .filter((i) => i.active !== false)
-        .map((i) => ({
-          x: i.x,
-          y: i.y,
-          id: `item_${i.x}_${i.y}`,
-          active: true,
-        }));
-      this.minimap.update(playerData, enemiesData, itemsData);
+
+      // Only update cached data every 100ms or when dirty
+      const now = Date.now();
+      if (this.minimapCache.dirty || now - this.minimapCache.lastUpdate > 100) {
+        // Update cache in-place instead of creating new arrays
+        this.minimapCache.enemies = [];
+        for (const e of this.enemies) {
+          if (e.active !== false) {
+            this.minimapCache.enemies.push({
+              x: e.x,
+              y: e.y,
+              id: `enemy_${e.x}_${e.y}`,
+              active: true,
+            });
+          }
+        }
+
+        this.minimapCache.items = [];
+        for (const i of this.items) {
+          if (i.active !== false) {
+            this.minimapCache.items.push({
+              x: i.x,
+              y: i.y,
+              id: `item_${i.x}_${i.y}`,
+              active: true,
+            });
+          }
+        }
+
+        this.minimapCache.dirty = false;
+        this.minimapCache.lastUpdate = now;
+      }
+
+      this.minimap.update(
+        playerData,
+        this.minimapCache.enemies,
+        this.minimapCache.items,
+      );
     }
 
     // Update time attack timer
@@ -1903,11 +1942,103 @@ export class GameScene extends Scene {
   }
 
   destroy() {
-    // Clean up
+    // Clean up game systems
     this.gameLoop?.destroy();
     this.saveManager?.destroy();
     this.minimap?.destroy();
+    this.errorHandler?.destroy();
+
+    // Clean up event bus listeners
     eventBus.off("game:pause", this.openPauseMenu.bind(this));
     eventBus.off("game:resume", this.resumeGame.bind(this));
+
+    // Remove all scene event listeners to prevent memory leaks
+    this.events.off("enemy:projectile-fired");
+    this.events.off("player:jump");
+    this.events.off("player:attack");
+    this.events.off("player:land");
+    this.events.off("item:collected");
+    this.events.off("player:damage");
+    this.events.off("enemy:damage");
+    this.events.off("player:parry");
+    this.events.off("player:perfect-parry");
+    this.events.off("level:complete");
+    this.events.off("game:over");
+    this.events.off("inventory:add");
+    this.events.off("inventory:remove");
+    this.events.off("inventory:item-dropped");
+    this.events.off("save:autosave");
+    this.events.off("save:manual");
+    this.events.off("save:load");
+    // Additional events that were missing cleanup
+    this.events.off("player:combo-changed");
+    this.events.off("player:combo-reset");
+    this.events.off("player:parry-successful");
+    this.events.off("player:item-picked-up");
+    this.events.off("player:healed");
+
+    // Remove network service listeners
+    if (this.networkService) {
+      this.networkService.removeAllListeners();
+    }
+
+    // Clean up remote players
+    this.remotePlayers.forEach((playerData) => {
+      playerData.sprite.destroy();
+      playerData.nameText.destroy();
+    });
+    this.remotePlayers.clear();
+
+    // Clean up game objects
+    this.enemies.forEach((enemy) => enemy.destroy());
+    this.enemies = [];
+
+    this.items.forEach((item) => item.destroy());
+    this.items = [];
+
+    this.platforms.forEach((platform) => platform.destroy());
+    this.platforms = [];
+
+    this.projectiles.forEach((proj) => proj.destroy());
+    this.projectiles = [];
+
+    // Destroy UI elements
+    this.scoreText?.destroy();
+    this.healthText?.destroy();
+    this.healthBar?.destroy();
+    this.healthBarBg?.destroy();
+    this.levelText?.destroy();
+    this.playerIdText?.destroy();
+    this.comboText?.destroy();
+    this.comboMultiplierText?.destroy();
+    this.timeAttackTimer?.destroy();
+    this.performanceDisplay?.destroy();
+
+    // Clean up managers (only call destroy if it exists)
+    if (
+      this.animationManager &&
+      typeof this.animationManager.destroy === "function"
+    ) {
+      this.animationManager.destroy();
+    }
+    if (this.audioService && typeof this.audioService.destroy === "function") {
+      this.audioService.destroy();
+    }
+    if (
+      this.particleManager &&
+      typeof this.particleManager.destroy === "function"
+    ) {
+      this.particleManager.destroy();
+    }
+    this.entityFactory = undefined;
+
+    // Stop performance monitoring
+    stopPerformanceMonitoring();
+    disableMemoryTracking();
+
+    // Force garbage collection hint
+    if (typeof window !== "undefined" && (window as any).gc) {
+      (window as any).gc();
+    }
   }
 }

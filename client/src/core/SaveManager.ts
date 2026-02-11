@@ -104,6 +104,45 @@ export class SaveManager {
   /** Scene reference for auto-save timer. */
   private scene?: Phaser.Scene;
 
+  /** Encryption key for save data. In production, this should be from a secure source. */
+  private static readonly ENCRYPTION_KEY = "PhaserPlatformerSaveKey2024!";
+
+  /**
+   * Encrypt data using XOR encryption.
+   * @param data Data to encrypt.
+   * @returns Encrypted base64 string.
+   */
+  private static encryptData(data: string): string {
+    let encrypted = "";
+    const key = SaveManager.ENCRYPTION_KEY;
+    for (let i = 0; i < data.length; i++) {
+      const charCode = data.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+      encrypted += String.fromCharCode(charCode);
+    }
+    return btoa(encrypted);
+  }
+
+  /**
+   * Decrypt data using XOR decryption.
+   * @param encryptedData Encrypted base64 string.
+   * @returns Decrypted string.
+   */
+  private static decryptData(encryptedData: string): string {
+    try {
+      const decoded = atob(encryptedData);
+      let decrypted = "";
+      const key = SaveManager.ENCRYPTION_KEY;
+      for (let i = 0; i < decoded.length; i++) {
+        const charCode = decoded.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+        decrypted += String.fromCharCode(charCode);
+      }
+      return decrypted;
+    } catch (error) {
+      console.error("Failed to decrypt save data:", error);
+      return "";
+    }
+  }
+
   /**
    * Creates an instance of SaveManager.
    * @param scene Optional scene reference for auto-save timer.
@@ -213,8 +252,9 @@ export class SaveManager {
 
     const key = this.getSlotKey(slotIndex);
     try {
-      localStorage.setItem(key, JSON.stringify(saveData));
-      console.log(`Game saved to slot ${slotIndex}`);
+      const encrypted = SaveManager.encryptData(JSON.stringify(saveData));
+      localStorage.setItem(key, encrypted);
+      console.log(`Game saved to slot ${slotIndex} (encrypted)`);
       return true;
     } catch (error) {
       console.error(`Failed to save game to slot ${slotIndex}:`, error);
@@ -239,8 +279,9 @@ export class SaveManager {
 
     const key = this.getAutoSaveKey();
     try {
-      localStorage.setItem(key, JSON.stringify(saveData));
-      console.log("Auto-save completed");
+      const encrypted = SaveManager.encryptData(JSON.stringify(saveData));
+      localStorage.setItem(key, encrypted);
+      console.log("Auto-save completed (encrypted)");
       return true;
     } catch (error) {
       console.error("Failed to create auto-save:", error);
@@ -267,7 +308,12 @@ export class SaveManager {
     }
 
     try {
-      const saveData: SaveData = JSON.parse(data);
+      const decrypted = SaveManager.decryptData(data);
+      if (!decrypted) {
+        console.error(`Failed to decrypt game data from slot ${slotIndex}`);
+        return undefined;
+      }
+      const saveData: SaveData = JSON.parse(decrypted);
       // Migrate save data if needed (version check)
       return this.migrateSaveData(saveData);
     } catch (error) {
@@ -289,7 +335,12 @@ export class SaveManager {
     }
 
     try {
-      const saveData: SaveData = JSON.parse(data);
+      const decrypted = SaveManager.decryptData(data);
+      if (!decrypted) {
+        console.error("Failed to decrypt auto-save data");
+        return undefined;
+      }
+      const saveData: SaveData = JSON.parse(decrypted);
       return this.migrateSaveData(saveData);
     } catch (error) {
       console.error("Failed to load auto-save:", error);

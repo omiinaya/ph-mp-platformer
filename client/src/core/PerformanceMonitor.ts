@@ -22,7 +22,8 @@ export class PerformanceMonitor {
   private static instance: PerformanceMonitor;
 
   private enabled: boolean = false;
-  private frameSamples: number[] = [];
+  private frameSamples: number[] = new Array(120).fill(0);
+  private frameSampleIndex: number = 0;
   private maxSamples: number = 120;
   private frameCount: number = 0;
   private lastFpsUpdate: number = 0;
@@ -31,8 +32,11 @@ export class PerformanceMonitor {
   private droppedFrames: number = 0;
   private frameTimes: number[] = [];
   private thresholdFps: number = 30;
-  private snapshots: PerformanceSnapshot[] = [];
+  private snapshots: PerformanceSnapshot[] = new Array(100).fill(null);
+  private snapshotIndex: number = 0;
   private maxSnapshots: number = 100;
+  private frameSamplesFilled: boolean = false;
+  private snapshotsFilled: boolean = false;
 
   private constructor() {}
 
@@ -66,10 +70,10 @@ export class PerformanceMonitor {
     if (this.frameTimes.length > 0) {
       const frameStart = this.frameTimes.pop()!;
       const frameTime = now - frameStart;
-      this.frameSamples.push(frameTime);
-
-      if (this.frameSamples.length > this.maxSamples) {
-        this.frameSamples.shift();
+      this.frameSamples[this.frameSampleIndex] = frameTime;
+      this.frameSampleIndex = (this.frameSampleIndex + 1) % this.maxSamples;
+      if (this.frameSampleIndex === 0) {
+        this.frameSamplesFilled = true;
       }
     }
 
@@ -112,13 +116,12 @@ export class PerformanceMonitor {
     activeParticles: number,
     activeProjectiles: number,
   ): PerformanceSnapshot {
+    const samples = this.getFrameSamples();
     const snapshot: PerformanceSnapshot = {
       timestamp: Date.now(),
       fps:
-        this.frameSamples.length > 0
-          ? Math.round(
-              1000 / (this.frameSamples[this.frameSamples.length - 1] || 16),
-            )
+        samples.length > 0
+          ? Math.round(1000 / (samples[samples.length - 1] || 16))
           : 60,
       activeEntities,
       activeParticles,
@@ -133,20 +136,13 @@ export class PerformanceMonitor {
         (window as any).performance.memory.usedJSHeapSize / 1024 / 1024;
     }
 
-    this.snapshots.push(snapshot);
-    if (this.snapshots.length > this.maxSnapshots) {
-      this.snapshots.shift();
+    this.snapshots[this.snapshotIndex] = snapshot;
+    this.snapshotIndex = (this.snapshotIndex + 1) % this.maxSnapshots;
+    if (this.snapshotIndex === 0) {
+      this.snapshotsFilled = true;
     }
 
     return snapshot;
-  }
-
-  public getSnapshots(): PerformanceSnapshot[] {
-    return [...this.snapshots];
-  }
-
-  public clearSnapshots(): void {
-    this.snapshots = [];
   }
 
   public getPerformanceReport(): string {
@@ -164,8 +160,9 @@ export class PerformanceMonitor {
     report += `Frame Time (p95): ${stats.p95.toFixed(2)}ms\n`;
     report += `Frame Time (p99): ${stats.p99.toFixed(2)}ms\n`;
 
-    if (this.snapshots.length > 0) {
-      const latest = this.snapshots[this.snapshots.length - 1];
+    const snapshots = this.getSnapshotsArray();
+    if (snapshots.length > 0) {
+      const latest = snapshots[snapshots.length - 1];
       report += `\n=== Latest Snapshot ===\n`;
       report += `Active Entities: ${latest.activeEntities}\n`;
       report += `Active Particles: ${latest.activeParticles}\n`;
@@ -178,10 +175,62 @@ export class PerformanceMonitor {
     return report;
   }
 
+  /**
+   * Get the number of valid frame samples in the circular buffer.
+   */
+  private getFrameSampleCount(): number {
+    return this.frameSamplesFilled ? this.maxSamples : this.frameSampleIndex;
+  }
+
+  /**
+   * Get the current frame samples as an array (excluding empty slots).
+   */
+  private getFrameSamples(): number[] {
+    const count = this.getFrameSampleCount();
+    if (count === 0) return [];
+
+    if (!this.frameSamplesFilled) {
+      return this.frameSamples.slice(0, count);
+    }
+
+    // Return samples in chronological order
+    const result: number[] = [];
+    for (let i = 0; i < count; i++) {
+      const idx = (this.frameSampleIndex + i) % this.maxSamples;
+      result.push(this.frameSamples[idx]);
+    }
+    return result;
+  }
+
+  /**
+   * Get the current snapshots as an array (excluding empty slots).
+   */
+  private getSnapshotsArray(): PerformanceSnapshot[] {
+    const count = this.snapshotsFilled ? this.maxSnapshots : this.snapshotIndex;
+    if (count === 0) return [];
+
+    if (!this.snapshotsFilled) {
+      return this.snapshots
+        .slice(0, count)
+        .filter((s): s is PerformanceSnapshot => s !== null);
+    }
+
+    // Return snapshots in chronological order
+    const result: PerformanceSnapshot[] = [];
+    for (let i = 0; i < count; i++) {
+      const idx = (this.snapshotIndex + i) % this.maxSnapshots;
+      if (this.snapshots[idx] !== null) {
+        result.push(this.snapshots[idx]);
+      }
+    }
+    return result;
+  }
+
   public getFrameTimeAverage(): number {
-    if (this.frameSamples.length === 0) return 0;
-    const sum = this.frameSamples.reduce((acc, val) => acc + val, 0);
-    return sum / this.frameSamples.length;
+    const samples = this.getFrameSamples();
+    if (samples.length === 0) return 0;
+    const sum = samples.reduce((acc, val) => acc + val, 0);
+    return sum / samples.length;
   }
 
   public getStatistics(): {
@@ -192,11 +241,12 @@ export class PerformanceMonitor {
     p95: number;
     p99: number;
   } {
-    if (this.frameSamples.length === 0) {
+    const samples = this.getFrameSamples();
+    if (samples.length === 0) {
       return { average: 0, min: 0, max: 0, p50: 0, p95: 0, p99: 0 };
     }
 
-    const sorted = [...this.frameSamples].sort((a, b) => a - b);
+    const sorted = [...samples].sort((a, b) => a - b);
     const sum = sorted.reduce((acc, val) => acc + val, 0);
     const average = sum / sorted.length;
     const min = sorted[0];
@@ -216,14 +266,28 @@ export class PerformanceMonitor {
     };
   }
 
+  public getSnapshots(): PerformanceSnapshot[] {
+    return this.getSnapshotsArray();
+  }
+
+  public clearSnapshots(): void {
+    this.snapshots = new Array(this.maxSnapshots).fill(null);
+    this.snapshotIndex = 0;
+    this.snapshotsFilled = false;
+  }
+
   public reset(): void {
-    this.frameSamples = [];
+    this.frameSamples = new Array(this.maxSamples).fill(0);
+    this.frameSampleIndex = 0;
+    this.frameSamplesFilled = false;
     this.frameTimes = [];
     this.frameCount = 0;
     this.minFps = Infinity;
     this.maxFps = 0;
     this.droppedFrames = 0;
-    this.snapshots = [];
+    this.snapshots = new Array(this.maxSnapshots).fill(null);
+    this.snapshotIndex = 0;
+    this.snapshotsFilled = false;
   }
 
   public isPerformanceGood(): boolean {

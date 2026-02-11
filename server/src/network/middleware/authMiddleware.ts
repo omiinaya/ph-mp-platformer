@@ -1,6 +1,6 @@
-import { Socket } from 'socket.io';
-import jwt from 'jsonwebtoken';
-import { logger } from '../../utils/logger';
+import { Socket } from "socket.io";
+import jwt from "jsonwebtoken";
+import { logger } from "../../utils/logger";
 
 /**
  * Authentication middleware for Socket.IO.
@@ -8,7 +8,7 @@ import { logger } from '../../utils/logger';
  */
 export function authenticateSocket(
   socket: Socket,
-  next: (err?: Error) => void
+  next: (err?: Error) => void,
 ): void {
   const token = socket.handshake.auth.token || socket.handshake.query.token;
 
@@ -20,7 +20,12 @@ export function authenticateSocket(
   }
 
   try {
-    const secret = process.env.JWT_SECRET || 'default_secret';
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      logger.error("JWT_SECRET environment variable not set");
+      return next(new Error("Server configuration error"));
+    }
+
     const decoded = jwt.verify(token as string, secret) as { userId: string };
     socket.data.userId = decoded.userId;
     socket.data.isGuest = false;
@@ -28,7 +33,7 @@ export function authenticateSocket(
     next();
   } catch (error) {
     logger.warn(`Authentication failed: ${(error as Error).message}`);
-    next(new Error('Authentication error'));
+    next(new Error("Authentication error"));
   }
 }
 
@@ -37,7 +42,7 @@ export function authenticateSocket(
  */
 export function requireAuth(socket: Socket, next: (err?: Error) => void): void {
   if (socket.data.isGuest) {
-    return next(new Error('Authentication required'));
+    return next(new Error("Authentication required"));
   }
   next();
 }
