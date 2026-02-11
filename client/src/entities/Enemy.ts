@@ -1,6 +1,15 @@
 import "phaser";
 import { Character } from "./Character";
 import { Player } from "./Player";
+import {
+  AttackPatternManager,
+  AttackPatternType,
+  AttackConfig,
+} from "./AttackPatternManager";
+import {
+  getGlobalProjectilePool,
+  PooledProjectile,
+} from "../core/ProjectilePool";
 
 /**
  * Enemy behavior state.
@@ -58,6 +67,12 @@ export abstract class Enemy extends Character {
   /** Time since last state change. */
   protected stateTimer: number;
 
+  /** Attack pattern manager. */
+  protected attackManager?: AttackPatternManager;
+
+  /** Whether attack patterns are enabled. */
+  protected useAttackPatterns: boolean = true;
+
   /**
    * Creates an instance of Enemy.
    * @param scene The scene this enemy belongs to.
@@ -77,6 +92,13 @@ export abstract class Enemy extends Character {
   ) {
     super(scene, x, y, texture, frame);
     this.aiState = "idle";
+    this.target = undefined;
+    this.aiConfig = config;
+    this.patrolTimer = 0;
+    this.patrolDirection = 1;
+    this.stateTimer = 0;
+
+    // Initialize default AI config values
     this.aiConfig = {
       detectionRange: 300,
       attackRange: 50,
@@ -88,14 +110,14 @@ export abstract class Enemy extends Character {
       lootTable: ["coin"],
       ...config,
     };
-    this.patrolTimer = 0;
-    this.patrolDirection = 1;
-    this.stateTimer = 0;
 
-    // Enemy-specific defaults
     this.moveSpeed = this.aiConfig.patrolSpeed!;
     this.health = 5;
     this.maxHealth = this.health;
+
+    // Initialize attack pattern manager
+    this.attackManager = new AttackPatternManager(this);
+    this.setupAttackPatterns();
 
     // Enable physics
     this.enablePhysics();
@@ -113,6 +135,11 @@ export abstract class Enemy extends Character {
     // Find target if not already set
     if (!this.target) {
       this.findTarget();
+    }
+
+    // Update attack pattern manager
+    if (this.useAttackPatterns && this.attackManager) {
+      this.attackManager.update(delta);
     }
 
     // State machine
@@ -139,6 +166,25 @@ export abstract class Enemy extends Character {
 
     // Update animation based on state
     this.updateAnimation();
+  }
+
+  /**
+   * Setup attack patterns for this enemy.
+   * Override in subclasses to define custom attacks.
+   */
+  protected setupAttackPatterns(): void {
+    // Default melee attack
+    const meleeAttack: AttackConfig = {
+      type: AttackPatternType.MELEE,
+      damage: 1,
+      range: this.aiConfig.attackRange!,
+      telegraphTime: 500,
+      attackDuration: 300,
+      cooldown: 1500,
+      priority: 1,
+    };
+
+    this.attackManager?.addAttack("melee", meleeAttack);
   }
 
   /**
@@ -257,8 +303,23 @@ export abstract class Enemy extends Character {
       return;
     }
 
-    // Perform attack (override in subclasses)
-    this.performAttack();
+    // Use attack pattern manager if enabled and available
+    if (this.useAttackPatterns && this.attackManager) {
+      // Check if an attack is already active
+      if (!this.attackManager.getActiveAttack()) {
+        // Select and execute an attack
+        const attackName = this.attackManager.selectBestAttack(this.target);
+        if (attackName) {
+          this.attackManager.executeAttack(attackName, this.target);
+        } else {
+          // No attacks available, fall back to old behavior
+          this.performAttack();
+        }
+      }
+    } else {
+      // Fall back to old attack behavior
+      this.performAttack();
+    }
   }
 
   /**
@@ -502,6 +563,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
 
 /**
  * Archer enemy: Ranged attacker that shoots projectiles.
+ * Now enhanced with the attack pattern system.
  */
 export class Archer extends Enemy {
   protected lastShotTime: number = 0;
@@ -509,7 +571,6 @@ export class Archer extends Enemy {
   protected projectileSpeed: number = 350;
   protected projectileDamage: number = 2;
   protected projectileTexture: string = "arrow";
-  protected projectiles: Projectile[] = [];
 
   constructor(
     scene: Phaser.Scene,
@@ -526,6 +587,24 @@ export class Archer extends Enemy {
     });
     this.health = 5;
     this.maxHealth = this.health;
+  }
+
+  protected setupAttackPatterns(): void {
+    // Use attack pattern system
+    const projectileAttack: AttackConfig = {
+      type: AttackPatternType.PROJECTILE,
+      damage: this.projectileDamage,
+      range: this.aiConfig.attackRange!,
+      telegraphTime: 800,
+      attackDuration: 500,
+      cooldown: 2000,
+      priority: 2,
+      customAttack: (enemy, target) => {
+        this.shoot();
+      },
+    };
+
+    this.attackManager?.addAttack("shoot", projectileAttack);
   }
 
   protected updateChase(delta: number): void {
@@ -567,6 +646,8 @@ export class Archer extends Enemy {
   }
 
   protected updateAttack(delta: number): void {
+    // Use parent's attack manager handling
+    // Check if too close or too far
     if (!this.target) {
       this.setAIState("patrol");
       return;
@@ -591,10 +672,29 @@ export class Archer extends Enemy {
       return;
     }
 
-    this.lastShotTime += delta;
-    if (this.lastShotTime >= this.shotCooldown) {
-      this.shoot();
-      this.lastShotTime = 0;
+    // Use the attack pattern manager from parent class
+    if (this.useAttackPatterns && this.attackManager) {
+      // Check if an attack is already active
+      if (!this.attackManager.getActiveAttack()) {
+        // Select and execute an attack
+        const attackName = this.attackManager.selectBestAttack(this.target);
+        if (attackName) {
+          this.attackManager.executeAttack(attackName, this.target);
+        } else {
+          // No attacks available
+          const activeAttack = this.attackManager.getActiveAttack();
+          if (!activeAttack) {
+            this.shoot();
+          }
+        }
+      }
+    } else {
+      // Fall back to default behavior
+      this.lastShotTime += delta;
+      if (this.lastShotTime >= this.shotCooldown) {
+        this.shoot();
+        this.lastShotTime = 0;
+      }
     }
   }
 
@@ -632,28 +732,147 @@ export class Archer extends Enemy {
     const arrowX = this.x + direction * 20;
     const arrowY = this.y - 10;
 
-    const arrow = new Projectile(
-      this.scene,
-      arrowX,
-      arrowY,
-      this.projectileTexture,
-      this,
-      direction,
-      this.projectileSpeed,
-      this.projectileDamage,
-    );
+    const pool = getGlobalProjectilePool();
+    if (pool) {
+      const arrow = pool.acquire();
+      arrow.initialize(
+        arrowX,
+        arrowY,
+        this.projectileTexture,
+        this,
+        direction,
+        this.projectileSpeed,
+        this.projectileDamage,
+      );
 
-    this.projectiles.push(arrow);
-
-    this.scene.events.emit("enemy:projectile-fired", {
-      enemy: this,
-      projectile: arrow,
-    });
+      this.scene.events.emit("enemy:projectile-fired", {
+        enemy: this,
+        projectile: arrow,
+      });
+    } else {
+      console.warn("ProjectilePool not available, using fallback");
+    }
   }
 
   public destroy(): void {
-    this.projectiles.forEach((p) => p.destroy());
-    this.projectiles = [];
     super.destroy();
+  }
+}
+
+/**
+ * Advanced enemy example with multiple attack patterns.
+ * This enemy demonstrates melee, charge, and area-of-effect attacks.
+ */
+export class AdvancedEnemy extends Enemy {
+  constructor(
+    scene: Phaser.Scene,
+    x: number,
+    y: number,
+    config: EnemyAIConfig = {},
+  ) {
+    super(scene, x, y, "slime", {
+      detectionRange: 350,
+      attackRange: 200,
+      patrolSpeed: 80,
+      chaseSpeed: 120,
+      ...config,
+    });
+    this.health = 10;
+    this.maxHealth = this.health;
+  }
+
+  protected setupAttackPatterns(): void {
+    // 1. Quick melee slash attack (primary attack, high priority)
+    const meleeAttack: AttackConfig = {
+      type: AttackPatternType.MELEE,
+      damage: 2,
+      range: 60,
+      telegraphTime: 400,
+      attackDuration: 200,
+      cooldown: 1200,
+      priority: 3,
+    };
+
+    // 2. Heavy charge attack (high damage, longer telegraph)
+    const chargeAttack: AttackConfig = {
+      type: AttackPatternType.CHARGE,
+      damage: 4,
+      range: 250,
+      telegraphTime: 1200,
+      attackDuration: 600,
+      cooldown: 4000,
+      priority: 1,
+    };
+
+    // 3. Area-of-effect shockwave (moderate damage, affects nearby area)
+    const aoeAttack: AttackConfig = {
+      type: AttackPatternType.AOE,
+      damage: 3,
+      range: 150,
+      telegraphTime: 1500,
+      attackDuration: 400,
+      cooldown: 5000,
+      priority: 1,
+    };
+
+    this.attackManager?.addAttack("melee_slash", meleeAttack);
+    this.attackManager?.addAttack("charge", chargeAttack);
+    this.attackManager?.addAttack("shockwave", aoeAttack);
+  }
+
+  /**
+   * Override attack selection to vary attacks based on health.
+   */
+  protected updateAttack(delta: number): void {
+    if (!this.target) {
+      this.setAIState("patrol");
+      return;
+    }
+
+    const distance = Phaser.Math.Distance.Between(
+      this.x,
+      this.y,
+      this.target.x,
+      this.target.y,
+    );
+
+    // If target moved out of attack range, chase
+    if (distance > this.aiConfig.attackRange!) {
+      this.setAIState("chase");
+      return;
+    }
+
+    // Use attack pattern manager
+    if (this.useAttackPatterns && this.attackManager) {
+      const activeAttack = this.attackManager.getActiveAttack();
+
+      if (!activeAttack) {
+        // When health is low, use more aggressive attacks
+        if (this.health < this.maxHealth * 0.3 && Math.random() < 0.3) {
+          // Prefer charge or shockwave when desperate
+          const aggressiveAttacks = ["charge", "shockwave"];
+          const availableAggressive = aggressiveAttacks.filter((name) =>
+            this.attackManager!.getAvailableAttacks().includes(name),
+          );
+
+          if (availableAggressive.length > 0) {
+            const selected =
+              availableAggressive[
+                Math.floor(Math.random() * availableAggressive.length)
+              ];
+            this.attackManager.executeAttack(selected, this.target);
+            return;
+          }
+        }
+
+        // Normal attack selection
+        const attackName = this.attackManager.selectBestAttack(this.target);
+        if (attackName) {
+          this.attackManager.executeAttack(attackName, this.target);
+        }
+      }
+    } else {
+      super.updateAttack(delta);
+    }
   }
 }

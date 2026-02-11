@@ -16,6 +16,13 @@ import {
   Coin,
   SpeedBoost,
   Key,
+  Gem,
+  RedGem,
+  BlueGem,
+  GreenGem,
+  PurpleGem,
+  YellowGem,
+  GemType,
 } from "../entities/Item";
 import {
   Skill,
@@ -29,6 +36,15 @@ import {
   PlatformConfig,
   PlatformMovement,
 } from "../entities/Platform";
+import {
+  PowerUp,
+  PowerUpManager,
+  DoubleJumpPowerUp,
+  ShieldPowerUp,
+  SpeedBoostPowerUp,
+  HealthBoostPowerUp,
+  DamageBoostPowerUp,
+} from "../entities/PowerUp";
 
 /**
  * Factory configuration for creating game entities.
@@ -388,5 +404,216 @@ export class EntityFactory {
       group.push(creator(i));
     }
     return group;
+  }
+
+  /**
+   * Create a double jump power-up.
+   * @param powerUpManager PowerUpManager instance.
+   * @param x X position.
+   * @param y Y position.
+   * @param duration Effect duration in milliseconds.
+   * @returns The created power-up.
+   */
+  public createDoubleJumpPowerUp(
+    powerUpManager: PowerUpManager,
+    x: number,
+    y: number,
+    duration: number = 10000,
+  ): DoubleJumpPowerUp {
+    const powerUp = new DoubleJumpPowerUp(
+      this.scene,
+      x,
+      y,
+      powerUpManager,
+      duration,
+    );
+    return powerUp;
+  }
+
+  /**
+   * Create a shield power-up.
+   * @param powerUpManager PowerUpManager instance.
+   * @param x X position.
+   * @param y Y position.
+   * @param duration Effect duration in milliseconds.
+   * @returns The created power-up.
+   */
+  public createShieldPowerUp(
+    powerUpManager: PowerUpManager,
+    x: number,
+    y: number,
+    duration: number = 8000,
+  ): ShieldPowerUp {
+    const powerUp = new ShieldPowerUp(
+      this.scene,
+      x,
+      y,
+      powerUpManager,
+      duration,
+    );
+    return powerUp;
+  }
+
+  /**
+   * Create a speed boost power-up.
+   * @param powerUpManager PowerUpManager instance.
+   * @param x X position.
+   * @param y Y position.
+   * @param duration Effect duration in milliseconds.
+   * @param multiplier Speed multiplier.
+   * @returns The created power-up.
+   */
+  public createSpeedBoostPowerUp(
+    powerUpManager: PowerUpManager,
+    x: number,
+    y: number,
+    duration: number = 6000,
+    multiplier: number = 1.5,
+  ): SpeedBoostPowerUp {
+    const powerUp = new SpeedBoostPowerUp(
+      this.scene,
+      x,
+      y,
+      powerUpManager,
+      duration,
+      multiplier,
+    );
+    return powerUp;
+  }
+
+  /**
+   * Create a health boost power-up (instant heal).
+   * @param powerUpManager PowerUpManager instance.
+   * @param x X position.
+   * @param y Y position.
+   * @param healAmount Amount of health to restore.
+   * @returns The created power-up.
+   */
+  public createHealthBoostPowerUp(
+    powerUpManager: PowerUpManager,
+    x: number,
+    y: number,
+    healAmount: number = 5,
+  ): HealthBoostPowerUp {
+    const powerUp = new HealthBoostPowerUp(
+      this.scene,
+      x,
+      y,
+      powerUpManager,
+      healAmount,
+    );
+    return powerUp;
+  }
+
+  /**
+   * Create a damage boost power-up.
+   * @param powerUpManager PowerUpManager instance.
+   * @param x X position.
+   * @param y Y position.
+   * @param duration Effect duration in milliseconds.
+   * @param multiplier Damage multiplier.
+   * @returns The created power-up.
+   */
+  public createDamageBoostPowerUp(
+    powerUpManager: PowerUpManager,
+    x: number,
+    y: number,
+    duration: number = 10000,
+    multiplier: number = 2,
+  ): DamageBoostPowerUp {
+    const powerUp = new DamageBoostPowerUp(
+      this.scene,
+      x,
+      y,
+      powerUpManager,
+      duration,
+      multiplier,
+    );
+    return powerUp;
+  }
+
+  /**
+   * Create a gem by type.
+   * @param gemType Type of gem to create.
+   * @param x X position.
+   * @param y Y position.
+   * @param config Additional item configuration.
+   * @returns The created gem.
+   */
+  public createGem(
+    gemType: GemType,
+    x: number,
+    y: number,
+    config?: Partial<ItemConfig> & { isSecret?: boolean },
+  ): Gem {
+    switch (gemType) {
+      case "red":
+        return new RedGem(this.scene, x, y, config);
+      case "blue":
+        return new BlueGem(this.scene, x, y, config);
+      case "green":
+        return new GreenGem(this.scene, x, y, config);
+      case "purple":
+        return new PurpleGem(this.scene, x, y, config);
+      case "yellow":
+        return new YellowGem(this.scene, x, y, config);
+      default:
+        return new RedGem(this.scene, x, y, config);
+    }
+  }
+
+  /**
+   * Create a red gem (common rarity).
+   */
+  public createRedGem(
+    x: number,
+    y: number,
+    config?: Partial<ItemConfig> & { isSecret?: boolean },
+  ): RedGem {
+    return new RedGem(this.scene, x, y, config);
+  }
+
+  /**
+   * Create a blue gem (uncommon rarity).
+   */
+  public createBlueGem(
+    x: number,
+    y: number,
+    config?: Partial<ItemConfig> & { isSecret?: boolean },
+  ): BlueGem {
+    return new BlueGem(this.scene, x, y, config);
+  }
+
+  /**
+   * Create a green gem (rare rarity).
+   */
+  public createGreenGem(
+    x: number,
+    y: number,
+    config?: Partial<ItemConfig> & { isSecret?: boolean },
+  ): GreenGem {
+    return new GreenGem(this.scene, x, y, config);
+  }
+
+  /**
+   * Create a purple gem (epic rarity).
+   */
+  public createPurpleGem(
+    x: number,
+    y: number,
+    config?: Partial<ItemConfig> & { isSecret?: boolean },
+  ): PurpleGem {
+    return new PurpleGem(this.scene, x, y, config);
+  }
+
+  /**
+   * Create a yellow gem (legendary rarity).
+   */
+  public createYellowGem(
+    x: number,
+    y: number,
+    config?: Partial<ItemConfig> & { isSecret?: boolean },
+  ): YellowGem {
+    return new YellowGem(this.scene, x, y, config);
   }
 }

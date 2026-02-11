@@ -10,6 +10,24 @@ import {
   ParticleManager,
   setGlobalParticleManager,
 } from "../core/ParticleManager";
+import { SaveManager, SaveData } from "../core/SaveManager";
+import { Minimap } from "../core/Minimap";
+import {
+  PerformanceMonitor,
+  startPerformanceMonitoring,
+} from "../core/PerformanceMonitor";
+import { MemoryTracker, enableMemoryTracking } from "../core/MemoryTracker";
+import {
+  ErrorHandler,
+  initErrorHandler,
+  showConnectionError,
+  showDisconnectionError,
+} from "../core/ErrorHandler";
+import {
+  ProjectilePool,
+  PooledProjectile,
+  setGlobalProjectilePool,
+} from "../core/ProjectilePool";
 import { EntityFactory } from "../factories/EntityFactory";
 import { Player } from "../entities/Player";
 import { Enemy, Projectile, Archer } from "../entities/Enemy";
@@ -20,10 +38,22 @@ import { TilemapLoader, LoadedTilemapData } from "../core/TilemapLoader";
 import { SceneService } from "../core/SceneManager";
 import { PauseSceneData } from "./PauseScene";
 import { GameOverSceneData } from "./GameOverScene";
+import { NetworkService } from "../services/NetworkService";
 
 export interface GameSceneData {
   level?: number;
   restart?: boolean;
+  roomId?: string;
+}
+
+interface RemotePlayerData {
+  id: string;
+  sprite: Phaser.GameObjects.Sprite;
+  nameText: Phaser.GameObjects.Text;
+  lastPosition: { x: number; y: number };
+  targetPosition: { x: number; y: number };
+  currentVelocity: { x: number; y: number };
+  lastUpdateTime: number;
 }
 
 export class GameScene extends Scene {
@@ -39,28 +69,55 @@ export class GameScene extends Scene {
   private animationManager?: AnimationManager;
   private audioService?: AudioService;
   private particleManager?: ParticleManager;
+  private saveManager?: SaveManager;
+  private networkService?: NetworkService;
+  private roomId?: string;
   private enemies: Enemy[] = [];
   private items: Item[] = [];
   private platforms: Platform[] = [];
-  private projectiles: Projectile[] = [];
+  private projectiles: PooledProjectile[] = [];
+  private projectilePool?: ProjectilePool;
+  private remotePlayers: Map<string, RemotePlayerData> = new Map();
+  private inputSequence: number = 0;
   private scoreText?: Phaser.GameObjects.Text;
   private healthText?: Phaser.GameObjects.Text;
   private healthBar?: Phaser.GameObjects.Graphics;
   private healthBarBg?: Phaser.GameObjects.Graphics;
   private levelText?: Phaser.GameObjects.Text;
+  private playerIdText?: Phaser.GameObjects.Text;
+  private comboText?: Phaser.GameObjects.Text;
+  private comboMultiplierText?: Phaser.GameObjects.Text;
+  private currentComboCount: number = 0;
+  private currentComboMultiplier: number = 1.0;
   private currentLevel: number = 1;
   private isPaused: boolean = false;
   private lastHealth: number = 0;
   private currentScore: number = 0;
   private displayedScore: number = 0;
+  private isMultiplayer: boolean = false;
+  private minimap?: Minimap;
+  private timeAttackTimer?: Phaser.GameObjects.Text;
+  private isTimeAttackMode: boolean = false;
+  private performanceMonitor: PerformanceMonitor;
+  private memoryTracker: MemoryTracker;
+  private performanceDisplay?: Phaser.GameObjects.Text;
+  private lastPerformanceUpdate: number = 0;
+  private errorHandler: ErrorHandler;
 
   constructor() {
     super({ key: "GameScene" });
+    this.performanceMonitor = PerformanceMonitor.getInstance();
+    this.memoryTracker = MemoryTracker.getInstance();
+    this.errorHandler = initErrorHandler();
   }
 
   init(data: GameSceneData) {
     this.currentLevel = data.level ?? 1;
     this.isPaused = false;
+    this.roomId = data.roomId;
+    if (this.roomId) {
+      this.isMultiplayer = true;
+    }
   }
 
   preload() {
@@ -106,6 +163,10 @@ export class GameScene extends Scene {
       width: 32,
       height: 32,
     });
+    this.load.svg("shield", "assets/sprites/shield.svg", {
+      width: 32,
+      height: 32,
+    });
 
     // Load all level tilemaps
     this.load.tilemapTiledJSON("level1", "assets/tilemaps/level1.json");
@@ -116,6 +177,11 @@ export class GameScene extends Scene {
   create() {
     // Initialize SceneService
     this.sceneService = new SceneService(this.game);
+
+    // Initialize NetworkService for multiplayer
+    if (this.isMultiplayer) {
+      this.setupNetwork();
+    }
 
     // Initialize LevelManager
     this.levelManager = new LevelManager(this);
@@ -162,6 +228,19 @@ export class GameScene extends Scene {
     this.particleManager = new ParticleManager(this);
     setGlobalParticleManager(this.particleManager);
 
+    // Initialize SaveManager
+    this.saveManager = new SaveManager(this, true, 60000); // Auto-save every 60 seconds
+
+    // Initialize Performance Monitoring
+    startPerformanceMonitoring(30); // Monitor with 30fps threshold
+    enableMemoryTracking();
+    this.performanceMonitor.enable(30);
+    this.memoryTracker.enable();
+
+    // Initialize ProjectilePool
+    this.projectilePool = new ProjectilePool(this, 20, 50);
+    setGlobalProjectilePool(this.projectilePool);
+
     // Initialize PhysicsManager
     this.physicsManager = new PhysicsManager(this, {
       gravity: { x: 0, y: 300 },
@@ -176,12 +255,17 @@ export class GameScene extends Scene {
         { id: "jump", keys: ["Up", "W", "Space"] },
         { id: "pause", keys: ["Escape", "P"] },
         { id: "attack", keys: ["Z", "Space"] },
+        { id: "parry", keys: ["X", "Shift", "Ctrl"] },
+        { id: "toggleMinimap", keys: ["M"] },
       ],
     };
     this.inputManager = new InputManager(this, inputConfig);
     this.inputManager.onInputEvent((event) => {
       if (event.action === "pause" && event.active) {
         this.openPauseMenu();
+      }
+      if (event.action === "toggleMinimap" && event.active) {
+        this.toggleMinimap();
       }
     });
 
@@ -375,7 +459,7 @@ export class GameScene extends Scene {
     // Listen for enemy projectile firing
     this.events.on(
       "enemy:projectile-fired",
-      (data: { enemy: Enemy; projectile: Projectile }) => {
+      (data: { enemy: Enemy; projectile: PooledProjectile }) => {
         this.projectiles.push(data.projectile);
         if (this.physicsManager) {
           this.physicsManager.enableBody(data.projectile);
@@ -384,7 +468,7 @@ export class GameScene extends Scene {
             data.projectile,
             (playerObj, projectileObj) => {
               const player = playerObj as Player;
-              const projectile = projectileObj as Projectile;
+              const projectile = projectileObj as PooledProjectile;
               if (player.takeDamage(projectile.getDamage())) {
                 this.cameras.main.shake(200, 0.01);
                 this.particleManager?.createDamageEffect(
@@ -394,7 +478,7 @@ export class GameScene extends Scene {
                 );
                 this.audioService?.playSFX("player_hit");
               }
-              projectile.onHit();
+              projectile.recycle();
             },
           );
         }
@@ -419,6 +503,17 @@ export class GameScene extends Scene {
 
     // Set physics world bounds
     this.physicsManager?.setBounds(0, 0, levelBounds.width, levelBounds.height);
+
+    // Initialize minimap
+    this.minimap = new Minimap(this, levelBounds.width, levelBounds.height, {
+      width: 200,
+      height: 150,
+      position: "top-right",
+      margin: 20,
+      showGrid: true,
+      gridSize: 100,
+      zoom: 1,
+    });
 
     // Create UI
     this.createUI();
@@ -474,6 +569,34 @@ export class GameScene extends Scene {
     this.healthText.setScrollFactor(0);
     this.healthText.setShadow(1, 1, "#000000", 1, true, true);
 
+    // Combo text (hidden initially)
+    this.comboText = this.add.text(width / 2, 50, "COMBO: 0", {
+      fontSize: "36px",
+      color: "#ff6b6b",
+      fontFamily: "Arial",
+      fontStyle: "bold",
+      stroke: "#000000",
+      strokeThickness: 4,
+    });
+    this.comboText.setOrigin(0.5);
+    this.comboText.setScrollFactor(0);
+    this.comboText.setAlpha(0);
+    this.comboText.setShadow(2, 2, "#000000", 2, true, true);
+
+    // Combo multiplier text (hidden initially)
+    this.comboMultiplierText = this.add.text(width / 2, 90, "1.0x", {
+      fontSize: "24px",
+      color: "#ffd93d",
+      fontFamily: "Arial",
+      fontStyle: "bold",
+      stroke: "#000000",
+      strokeThickness: 3,
+    });
+    this.comboMultiplierText.setOrigin(0.5);
+    this.comboMultiplierText.setScrollFactor(0);
+    this.comboMultiplierText.setAlpha(0);
+    this.comboMultiplierText.setShadow(2, 2, "#000000", 2, true, true);
+
     // Level text
     this.levelText = this.add.text(
       width - 20,
@@ -488,6 +611,31 @@ export class GameScene extends Scene {
     );
     this.levelText.setOrigin(1, 0);
     this.levelText.setScrollFactor(0);
+
+    // Time attack timer (hidden by default)
+    this.timeAttackTimer = this.add.text(width - 20, 60, "3:00", {
+      fontSize: "28px",
+      color: "#ffffff",
+      fontFamily: "Arial",
+      fontStyle: "bold",
+      stroke: "#000000",
+      strokeThickness: 4,
+    });
+    this.timeAttackTimer.setOrigin(1, 0);
+    this.timeAttackTimer.setScrollFactor(0);
+    this.timeAttackTimer.setAlpha(0); // Hidden by default
+    this.timeAttackTimer.setShadow(2, 2, "#000000", 2, true, true);
+
+    // Performance display (top-left, small font)
+    this.performanceDisplay = this.add.text(20, 100, "FPS: 60", {
+      fontSize: "14px",
+      color: "#00ff00",
+      fontFamily: "monospace",
+      backgroundColor: "#000000",
+      padding: { x: 4, y: 2 },
+    });
+    this.performanceDisplay.setScrollFactor(0);
+    this.performanceDisplay.setAlpha(0.7);
   }
 
   private updateUI(): void {
@@ -532,9 +680,62 @@ export class GameScene extends Scene {
     }
   }
 
+  private updatePerformanceMonitoring(delta: number): void {
+    // Update performance monitor frame tracking
+    this.performanceMonitor.startFrame();
+    const metrics = this.performanceMonitor.endFrame(delta);
+
+    // Update performance display every 500ms
+    this.lastPerformanceUpdate += delta;
+    if (this.lastPerformanceUpdate >= 500 && this.performanceDisplay) {
+      this.lastPerformanceUpdate = 0;
+
+      const fps = metrics?.fps ?? 60;
+      const color = fps >= 55 ? "#00ff00" : fps >= 30 ? "#ffff00" : "#ff0000";
+
+      this.performanceDisplay.setText(`FPS: ${fps}`);
+      this.performanceDisplay.setColor(color);
+    }
+  }
+
   private handleInput(delta: number): void {
     // Input handling is now delegated to Player via InputManager binding
     // Additional global input (e.g., pause) can be handled here
+
+    // Send player input to server in multiplayer
+    if (
+      this.isMultiplayer &&
+      this.inputManager &&
+      this.networkService?.isConnected()
+    ) {
+      const input: any = {
+        moveX: 0,
+        moveY: 0,
+        jump: false,
+        attack: false,
+      };
+
+      if (this.inputManager.isActionActive("left")) {
+        input.moveX -= 1;
+      }
+      if (this.inputManager.isActionActive("right")) {
+        input.moveX += 1;
+      }
+      if (this.inputManager.isActionActive("up")) {
+        input.moveY -= 1;
+      }
+      if (this.inputManager.isActionActive("down")) {
+        input.moveY += 1;
+      }
+      if (this.inputManager.isActionActive("jump")) {
+        input.jump = true;
+      }
+      if (this.inputManager.isActionActive("attack")) {
+        input.attack = true;
+      }
+
+      this.sendPlayerInput(input);
+    }
   }
 
   private updateEntities(delta: number): void {
@@ -542,6 +743,11 @@ export class GameScene extends Scene {
 
     // Update player (always)
     this.player.update(delta);
+
+    // Update remote players in multiplayer
+    if (this.isMultiplayer) {
+      this.updateRemotePlayers(delta);
+    }
 
     // Get camera bounds with a margin for culling
     const camera = this.cameras.main;
@@ -579,17 +785,54 @@ export class GameScene extends Scene {
       }
     });
 
-    // Update projectiles and remove destroyed ones
-    this.projectiles = this.projectiles.filter((projectile) => {
-      if (projectile.active) {
-        projectile.update(delta);
-        return true;
-      }
-      return false;
-    });
+    // Update projectiles via pool
+    this.projectilePool?.update(delta);
 
     // Update UI
     this.updateUI();
+
+    // Update performance monitoring
+    this.updatePerformanceMonitoring(delta);
+
+    // Update minimap
+    if (this.minimap) {
+      const playerData = {
+        x: this.player.x,
+        y: this.player.y,
+        id: this.player.sessionId || "local",
+      };
+      const enemiesData = this.enemies
+        .filter((e) => e.active !== false)
+        .map((e) => ({
+          x: e.x,
+          y: e.y,
+          id: `enemy_${e.x}_${e.y}`,
+          active: true,
+        }));
+      const itemsData = this.items
+        .filter((i) => i.active !== false)
+        .map((i) => ({
+          x: i.x,
+          y: i.y,
+          id: `item_${i.x}_${i.y}`,
+          active: true,
+        }));
+      this.minimap.update(playerData, enemiesData, itemsData);
+    }
+
+    // Update time attack timer
+    if (this.isTimeAttackMode && this.timeAttackTimer && this.levelManager) {
+      const timeElapsed = this.levelManager.getTimeElapsed();
+      const timeLimit = this.levelManager.getCurrentLevel()?.timeLimit || 180;
+      const timeRemaining = Math.max(0, timeLimit - timeElapsed);
+      const minutes = Math.floor(timeRemaining / 60);
+      const seconds = Math.floor(timeRemaining % 60);
+      const timeColor = timeRemaining < 30 ? "#ff0000" : "#ffffff";
+      this.timeAttackTimer.setText(
+        `${minutes}:${seconds.toString().padStart(2, "0")}`,
+      );
+      this.timeAttackTimer.setColor(timeColor);
+    }
   }
 
   private checkGameConditions(): void {
@@ -616,6 +859,21 @@ export class GameScene extends Scene {
     if (this.isPaused) return;
     this.isPaused = true;
 
+    // Unlock next level
+    this.unlockLevel(this.currentLevel + 1);
+
+    // Save progress
+    if (this.saveManager) {
+      const saveData = this.createSaveData();
+      saveData.levels[this.currentLevel]!.completed = true;
+      const timeElapsed = this.levelManager?.getTimeElapsed() ?? 0;
+      const levelData = saveData.levels[this.currentLevel]!;
+      if (!levelData.bestTime || timeElapsed < levelData.bestTime) {
+        levelData.bestTime = timeElapsed;
+      }
+      this.saveManager.saveAutoGame(saveData);
+    }
+
     this.physicsManager?.pause();
     this.gameLoop?.stop();
 
@@ -636,6 +894,12 @@ export class GameScene extends Scene {
   private handleGameOver(won: boolean): void {
     if (this.isPaused) return;
     this.isPaused = true;
+
+    // Save progress before game over
+    if (!won && this.saveManager) {
+      const saveData = this.createSaveData();
+      this.saveManager.saveAutoGame(saveData);
+    }
 
     this.physicsManager?.pause();
     this.gameLoop?.stop();
@@ -720,6 +984,65 @@ export class GameScene extends Scene {
       this.audioService?.playSFX("enemy_hit");
     });
 
+    // Player attack event - deal damage to nearby enemies
+    this.events.on(
+      "player:attack",
+      (data: {
+        player: Player;
+        comboCount: number;
+        comboMultiplier: number;
+        attackDamage: number;
+      }) => {
+        this.handlePlayerAttack(data.player, data.attackDamage);
+      },
+    );
+
+    // Combo changed event
+    this.events.on(
+      "player:combo-changed",
+      (data: {
+        player: Player;
+        comboCount: number;
+        comboMultiplier: number;
+        wasNewCombo: boolean;
+      }) => {
+        this.currentComboCount = data.comboCount;
+        this.currentComboMultiplier = data.comboMultiplier;
+        this.updateComboUI(data.wasNewCombo);
+      },
+    );
+
+    // Combo reset event
+    this.events.on(
+      "player:combo-reset",
+      (data: { player: Player; reason: string }) => {
+        this.currentComboCount = 0;
+        this.currentComboMultiplier = 1.0;
+        this.hideComboUI();
+      },
+    );
+
+    // Parry start event
+    this.events.on("player:parry", (data: { player: Player }) => {
+      this.audioService?.playSFX("defense");
+    });
+
+    // Parry successful event
+    this.events.on(
+      "player:parry-successful",
+      (data: { player: Player; perfectParry: boolean }) => {
+        if (data.perfectParry) {
+          this.audioService?.playSFX("powerup");
+        }
+      },
+    );
+
+    // Perfect parry event
+    this.events.on("player:perfect-parry", (data: { player: Player }) => {
+      this.cameras.main.shake(50, 0.01);
+      this.particleManager?.createDamageEffect(data.player.x, data.player.y, 0);
+    });
+
     // Level events
     this.events.on("level:complete", () => {
       this.audioService?.stopMusic(true);
@@ -730,34 +1053,64 @@ export class GameScene extends Scene {
       this.audioService?.stopMusic(true);
       this.audioService?.playSFX("game_over");
     });
+
+    // Inventory events
+    this.events.on(
+      "player:item-picked-up",
+      (data: { player: Player; item: Item; quantity: number }) => {
+        this.audioService?.playSFX("item_pickup");
+        // Visual feedback
+        if (data.item.config.collectEffect) {
+          this.particleManager?.createHealthPickupEffect(
+            data.player.x,
+            data.player.y,
+          );
+        }
+      },
+    );
+
+    this.events.on(
+      "player:healed",
+      (data: { player: Player; amount: number }) => {
+        this.audioService?.playSFX("health_pickup");
+        // Heal particles
+        this.particleManager?.createHealthPickupEffect(
+          data.player.x,
+          data.player.y,
+        );
+      },
+    );
+
+    this.events.on("inventory:add", (data: any) => {
+      console.log("Item added to inventory:", data);
+    });
+
+    this.events.on("inventory:remove", (data: any) => {
+      console.log("Item removed from inventory:", data);
+    });
+
+    // Handle dropped items from inventory
+    this.events.on("inventory:item-dropped", (data: any) => {
+      this.handleDroppedItem(data);
+    });
+
+    // Save system events
+    this.events.on("save:autosave", () => {
+      this.autoSaveGame();
+    });
+
+    this.events.on("save:manual", (data: { slotIndex: number }) => {
+      this.manualSaveGame(data.slotIndex);
+    });
+
+    this.events.on("save:load", (data: { slotIndex: number }) => {
+      this.loadGame(data.slotIndex);
+    });
   }
 
   private setupProjectileCollisions(): void {
-    // Create a projectile group for efficient physics
-    const projectileGroup = this.physics.add.group();
-    this.projectiles.forEach((p) => {
-      projectileGroup.add(p);
-    });
-
-    // Collision with player
-    this.physics.add.overlap(
-      this.player,
-      projectileGroup,
-      (playerObj, projectileObj) => {
-        const player = playerObj as Player;
-        const projectile = projectileObj as Projectile;
-        if (player.takeDamage(projectile.getDamage())) {
-          this.cameras.main.shake(200, 0.01);
-          this.particleManager?.createDamageEffect(
-            player.x,
-            player.y,
-            projectile.getDamage(),
-          );
-          this.audioService?.playSFX("player_hit");
-        }
-        projectile.onHit();
-      },
-    );
+    // Projectiles are now managed by the ProjectilePool
+    // Collisions are set up dynamically when projectiles are fired
   }
 
   private getLevelBounds(levelNumber: number): {
@@ -777,9 +1130,783 @@ export class GameScene extends Scene {
     }
   }
 
+  private setupNetwork(): void {
+    this.networkService = new NetworkService();
+
+    this.networkService.on("connected", (data: { playerId: string }) => {
+      console.log("Connected to server with ID:", data.playerId);
+      this.playerIdText = this.add
+        .text(
+          this.cameras.main.width / 2,
+          80,
+          `Player: ${data.playerId.substring(0, 8)}`,
+          { fontSize: "16px", color: "#fff" },
+        )
+        .setOrigin(0.5)
+        .setScrollFactor(0);
+    });
+
+    this.networkService.on(
+      "room_joined",
+      (data: { roomId: string; players: any[] }) => {
+        console.log("Joined room:", data.roomId);
+        this.remotePlayers.clear();
+        data.players.forEach((playerData: any) => {
+          if (playerData.playerId !== this.networkService?.getPlayerId()) {
+            this.createRemotePlayer(playerData.playerId, playerData.position);
+          }
+        });
+      },
+    );
+
+    this.networkService.on(
+      "player_joined",
+      (data: { playerId: string; playerData: any }) => {
+        if (data.playerId !== this.networkService?.getPlayerId()) {
+          this.createRemotePlayer(
+            data.playerId,
+            data.playerData?.position || { x: 200, y: 300 },
+          );
+          this.showPlayerName(data.playerId, "connected");
+        }
+      },
+    );
+
+    this.networkService.on("player_left", (data: { playerId: string }) => {
+      this.removeRemotePlayer(data.playerId);
+      this.showPlayerName(data.playerId, "disconnected");
+    });
+
+    this.networkService.on(
+      "game_state_update",
+      (state: { entities: any; full: boolean }) => {
+        this.handleGameStateUpdate(state);
+      },
+    );
+
+    this.networkService.on(
+      "player_input",
+      (data: { playerId: string; input: any }) => {
+        this.handleRemotePlayerInput(data.playerId, data.input);
+      },
+    );
+
+    this.networkService.on("error", (error: { message: string }) => {
+      console.error("Network error:", error.message);
+    });
+
+    // Handle disconnection with recovery
+    this.networkService.on("disconnected", (data: { reason: string }) => {
+      console.warn("Disconnected from server:", data.reason);
+      showConnectionError(() => {
+        // Retry connection
+        this.networkService?.connect().catch((err) => {
+          console.error("Reconnection failed:", err);
+        });
+      });
+    });
+
+    this.networkService.on(
+      "reconnect_attempt",
+      (data: { attemptNumber: number }) => {
+        console.log(`Reconnection attempt ${data.attemptNumber}...`);
+      },
+    );
+
+    this.networkService.on("reconnected", (data: { attemptNumber: number }) => {
+      console.log(
+        "Successfully reconnected after",
+        data.attemptNumber,
+        "attempts",
+      );
+      // Sync game state after reconnection
+      this.syncGameStateAfterReconnect();
+    });
+
+    this.networkService.on("reconnect_failed", () => {
+      console.error("Failed to reconnect to server");
+      showDisconnectionError(() => {
+        this.returnToMainMenu();
+      });
+    });
+
+    this.networkService.connect().catch((err) => {
+      console.error("Failed to connect to server:", err);
+    });
+  }
+
+  private createRemotePlayer(
+    playerId: string,
+    position: { x: number; y: number },
+  ): void {
+    if (this.remotePlayers.has(playerId)) return;
+
+    const sprite = this.add.sprite(position.x, position.y, "player");
+    sprite.setTint(0x8f4d8d);
+    sprite.setDepth(5);
+
+    const nameText = this.add
+      .text(position.x, position.y - 20, `P${playerId.substring(0, 4)}`, {
+        fontSize: "12px",
+        color: "#fff",
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5)
+      .setDepth(6);
+
+    this.remotePlayers.set(playerId, {
+      id: playerId,
+      sprite,
+      nameText,
+      lastPosition: { ...position },
+      targetPosition: { ...position },
+      currentVelocity: { x: 0, y: 0 },
+      lastUpdateTime: Date.now(),
+    });
+  }
+
+  private removeRemotePlayer(playerId: string): void {
+    const playerData = this.remotePlayers.get(playerId);
+    if (playerData) {
+      playerData.sprite.destroy();
+      playerData.nameText.destroy();
+      this.remotePlayers.delete(playerId);
+    }
+  }
+
+  private handleGameStateUpdate(state: { entities: any; full: boolean }): void {
+    const now = Date.now();
+    const entities = state.entities;
+
+    for (const [entityId, entity] of Object.entries(entities) as [
+      string,
+      any,
+    ][]) {
+      if (entityId === this.networkService?.getPlayerId()) continue;
+
+      const remotePlayer = this.remotePlayers.get(entityId);
+      if (remotePlayer && entity.position) {
+        remotePlayer.targetPosition = { ...entity.position };
+        remotePlayer.lastUpdateTime = now;
+
+        if (entity.velocity) {
+          remotePlayer.currentVelocity = { ...entity.velocity };
+        }
+      }
+    }
+
+    if (state.full) {
+      const currentPlayerIds = Object.keys(state.entities);
+      const myPlayerId = this.networkService?.getPlayerId();
+
+      for (const playerId of this.remotePlayers.keys()) {
+        if (playerId !== myPlayerId && !currentPlayerIds.includes(playerId)) {
+          this.removeRemotePlayer(playerId);
+        }
+      }
+    }
+  }
+
+  private handleRemotePlayerInput(playerId: string, input: any): void {
+    const remotePlayer = this.remotePlayers.get(playerId);
+    if (remotePlayer) {
+      if (input.moveX !== undefined) {
+        remotePlayer.sprite.flipX = input.moveX < 0;
+      }
+    }
+  }
+
+  private updateRemotePlayers(delta: number): void {
+    const now = Date.now();
+    const lerpFactor = 0.15;
+
+    for (const [playerId, playerData] of this.remotePlayers.entries()) {
+      const { sprite, nameText, targetPosition, lastUpdateTime } = playerData;
+
+      if (targetPosition) {
+        const dx = targetPosition.x - sprite.x;
+        const dy = targetPosition.y - sprite.y;
+
+        sprite.x += dx * lerpFactor;
+        sprite.y += dy * lerpFactor;
+
+        nameText.x = sprite.x;
+        nameText.y = sprite.y - 25;
+
+        if (Math.abs(playerData.currentVelocity?.x || 0) > 10) {
+          sprite.anims.play("walk", true);
+          sprite.flipX = playerData.currentVelocity.x < 0;
+        } else {
+          sprite.anims.play("idle", true);
+        }
+      }
+
+      const timeSinceUpdate = now - lastUpdateTime;
+      if (timeSinceUpdate > 5000) {
+        sprite.alpha = Math.max(0.3, 1 - timeSinceUpdate / 5000);
+      } else {
+        sprite.alpha = 1;
+      }
+    }
+  }
+
+  private sendPlayerInput(input: any): void {
+    if (!this.networkService?.isConnected() || !this.isMultiplayer) return;
+
+    this.inputSequence++;
+    this.networkService.sendPlayerInput({
+      sequence: this.inputSequence,
+      input,
+      timestamp: Date.now(),
+    });
+  }
+
+  private showPlayerName(playerId: string, action: string): void {
+    const text = this.add
+      .text(
+        this.cameras.main.width / 2,
+        this.cameras.main.height / 2,
+        `Player ${playerId.substring(0, 8)} ${action}`,
+        {
+          fontSize: "24px",
+          color: action === "connected" ? "#4CAF50" : "#f44336",
+          fontStyle: "bold",
+        },
+      )
+      .setOrigin(0.5)
+      .setDepth(1000)
+      .setScrollFactor(0);
+
+    this.tweens.add({
+      targets: text,
+      y: this.cameras.main.height / 2 - 50,
+      alpha: 0,
+      duration: 2000,
+      ease: "Sine.easeIn",
+      onComplete: () => text.destroy(),
+    });
+  }
+
+  /**
+   * Handle player attack - deal damage to nearby enemies
+   */
+  private handlePlayerAttack(player: Player, attackDamage: number): void {
+    const attackRange = 80;
+    const attackOffset = 40 * player.facing;
+
+    // Check each enemy for being in attack range
+    this.enemies.forEach((enemy) => {
+      if (!enemy.active) return;
+
+      const dx = enemy.x - (player.x + attackOffset);
+      const dy = enemy.y - player.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      // Check if enemy is in attack range and in front of player
+      if (distance < attackRange && Math.sign(dx) === player.facing) {
+        // Deal damage to enemy with combo multiplier applied
+        const alive = enemy.takeDamage(attackDamage);
+
+        // Increment combo on successful hit (if enemy took damage)
+        if (!alive || enemy.health < enemy.maxHealth) {
+          player.onEnemyHit();
+
+          // Visual feedback
+          this.cameras.main.shake(100, 0.005);
+          this.particleManager?.createDamageEffect(
+            enemy.x,
+            enemy.y,
+            attackDamage,
+          );
+          this.audioService?.playSFX("enemy_hit");
+        }
+      }
+    });
+  }
+
+  /**
+   * Update combo UI with animation
+   */
+  private updateComboUI(wasNewCombo: boolean): void {
+    if (!this.comboText || !this.comboMultiplierText) return;
+
+    this.comboText.setText(
+      this.currentComboCount > 0 ? `COMBO: ${this.currentComboCount}!` : "",
+    );
+    this.comboMultiplierText.setText(
+      `${this.currentComboMultiplier.toFixed(1)}x`,
+    );
+
+    // Scale animation on new combo
+    if (wasNewCombo) {
+      this.tweens.add({
+        targets: [this.comboText, this.comboMultiplierText],
+        scaleX: 1.3,
+        scaleY: 1.3,
+        duration: 100,
+        yoyo: true,
+        ease: "Sine.easeInOut",
+      });
+    }
+
+    this.comboText.setAlpha(1);
+    this.comboMultiplierText.setAlpha(1);
+
+    // Color based on multiplier
+    const multiplier = this.currentComboMultiplier;
+    let comboColor = "#ff6b6b";
+    if (multiplier >= 2.0) comboColor = "#ffd93d";
+    if (multiplier >= 2.5) comboColor = "#ff9f43";
+    if (multiplier >= 3.0) comboColor = "#ee5a24";
+
+    this.comboText.setColor(comboColor);
+  }
+
+  /**
+   * Hide combo UI with fade out
+   */
+  private hideComboUI(): void {
+    if (!this.comboText || !this.comboMultiplierText) return;
+
+    this.tweens.add({
+      targets: [this.comboText, this.comboMultiplierText],
+      alpha: 0,
+      duration: 500,
+      ease: "Sine.easeOut",
+    });
+  }
+
+  /**
+   * Create save data from current game state.
+   * @returns Save data object.
+   */
+  private createSaveData(): SaveData {
+    const levelState = this.levelManager?.getState();
+
+    return {
+      version: "1.0.0",
+      timestamp: Date.now(),
+      player: {
+        health: this.player.health,
+        maxHealth: this.player.maxHealth,
+        currentLevel: this.currentLevel,
+        unlockedLevels: this.getUnlockedLevels(),
+        totalScore: levelState?.score ?? this.currentScore,
+        totalCoins: levelState?.coins ?? 0,
+        totalEnemiesDefeated: levelState?.enemiesDefeated ?? 0,
+      },
+      levels: {
+        [this.currentLevel]: {
+          highScore: levelState?.score ?? this.currentScore,
+          completed: false,
+          lastCheckpoint: 0,
+        },
+      },
+      lastPosition: {
+        level: this.currentLevel,
+        x: Math.round(this.player.x),
+        y: Math.round(this.player.y),
+      },
+      settings: {
+        musicVolume: 100,
+        sfxVolume: 100,
+        musicEnabled: true,
+        sfxEnabled: true,
+      },
+    };
+  }
+
+  /**
+   * Auto-save the game (uses separate slot).
+   */
+  private autoSaveGame(): void {
+    if (this.saveManager && this.levelManager) {
+      const saveData = this.createSaveData();
+      this.saveManager.saveAutoGame(saveData);
+      console.log("Auto-saved game");
+    }
+  }
+
+  /**
+   * Manually save the game to a specific slot.
+   * @param slotIndex Save slot index (0-4).
+   * @returns True if the save was successful.
+   */
+  public manualSaveGame(slotIndex: number): boolean {
+    if (!this.saveManager) return false;
+
+    const saveData = this.createSaveData();
+    const success = this.saveManager.saveGame(slotIndex, saveData);
+
+    if (success) {
+      // Save unlocked levels
+      this.updateUnlockedLevels(saveData.player.unlockedLevels);
+    }
+
+    return success;
+  }
+
+  /**
+   * Load game from a specific save slot.
+   * @param slotIndex Save slot index (0-4), or -1 for auto-save.
+   * @returns True if the load was successful.
+   */
+  public loadGame(slotIndex: number): boolean {
+    if (!this.saveManager) return false;
+
+    let saveData: SaveData | undefined;
+
+    if (slotIndex === -1) {
+      // Load from auto-save
+      saveData = this.saveManager.loadAutoGame();
+    } else {
+      // Load from specific slot
+      saveData = this.saveManager.loadGame(slotIndex);
+    }
+
+    if (!saveData) {
+      console.error("Failed to load game: no save data found");
+      return false;
+    }
+
+    this.applySaveData(saveData);
+    console.log(
+      `Game loaded from slot ${slotIndex === -1 ? "auto-save" : slotIndex}`,
+    );
+    return true;
+  }
+
+  /**
+   * Apply loaded save data to the game state.
+   * @param saveData The save data to apply.
+   */
+  private applySaveData(saveData: SaveData): void {
+    // Update player state
+    this.player.health = Math.min(
+      saveData.player.health,
+      saveData.player.maxHealth,
+    );
+    this.player.maxHealth = saveData.player.maxHealth;
+
+    // Update level
+    this.currentLevel = saveData.player.currentLevel;
+
+    // Load the appropriate level
+    if (this.levelManager) {
+      const loaded = this.levelManager.loadLevelByNumber(this.currentLevel);
+      if (loaded) {
+        // Update score state
+        const state = this.levelManager.getState();
+        if (state) {
+          state.score = saveData.player.totalScore;
+          state.coins = saveData.player.totalCoins;
+          state.enemiesDefeated = saveData.player.totalEnemiesDefeated;
+        }
+
+        // Update camera bounds for new level
+        const levelBounds = this.getLevelBounds(this.currentLevel);
+        this.cameras.main.setBounds(
+          0,
+          0,
+          levelBounds.width,
+          levelBounds.height,
+        );
+        this.physicsManager?.setBounds(
+          0,
+          0,
+          levelBounds.width,
+          levelBounds.height,
+        );
+
+        // Set player position from save
+        if (
+          saveData.lastPosition &&
+          saveData.lastPosition.level === this.currentLevel
+        ) {
+          this.player.x = saveData.lastPosition.x;
+          this.player.y = saveData.lastPosition.y;
+        }
+      }
+
+      // Update UI
+      this.updateUI();
+
+      // Update level text
+      if (this.levelText) {
+        this.levelText.setText(`Level ${this.currentLevel}`);
+      }
+    }
+
+    // Update unlocked levels
+    this.updateUnlockedLevels(saveData.player.unlockedLevels);
+  }
+
+  /**
+   * Update unlocked levels from save data.
+   * Stores unlocked levels in LocalStorage.
+   * @param unlockedLevels Array of unlocked level numbers.
+   */
+  private updateUnlockedLevels(unlockedLevels: number[]): void {
+    const key = SaveManager["STORAGE_PREFIX"] + "unlocked_levels";
+    localStorage.setItem(key, JSON.stringify(unlockedLevels));
+  }
+
+  /**
+   * Get unlocked levels from LocalStorage.
+   * @returns Array of unlocked level numbers.
+   */
+  private getUnlockedLevels(): number[] {
+    const key = SaveManager["STORAGE_PREFIX"] + "unlocked_levels";
+    const data = localStorage.getItem(key);
+
+    if (!data) {
+      return [1]; // Default: only level 1 is unlocked
+    }
+
+    try {
+      return JSON.parse(data);
+    } catch (error) {
+      console.error("Failed to parse unlocked levels:", error);
+      return [1];
+    }
+  }
+
+  /**
+   * Check if a specific level is unlocked.
+   * @param levelNumber The level number to check.
+   * @returns True if the level is unlocked.
+   */
+  public isLevelUnlocked(levelNumber: number): boolean {
+    const unlockedLevels = this.getUnlockedLevels();
+    return unlockedLevels.includes(levelNumber);
+  }
+
+  /**
+   * Unlock a specific level.
+   * @param levelNumber The level number to unlock.
+   */
+  public unlockLevel(levelNumber: number): void {
+    const unlockedLevels = this.getUnlockedLevels();
+    if (!unlockedLevels.includes(levelNumber)) {
+      unlockedLevels.push(levelNumber);
+      this.updateUnlockedLevels(unlockedLevels);
+      console.log(`Unlocked level ${levelNumber}`);
+    }
+  }
+
+  /**
+   * Create checkpoint data for saving.
+   * @param checkpointNumber Checkpoint number (0 for start, 1-N for checkpoints).
+   * @returns Partial save data for checkpoint.
+   */
+  public createCheckpointData(checkpointNumber: number = 0): Partial<SaveData> {
+    const levelState = this.levelManager?.getState();
+
+    return {
+      player: {
+        health: this.player.health,
+        maxHealth: this.player.maxHealth,
+        currentLevel: this.currentLevel,
+        unlockedLevels: this.getUnlockedLevels(),
+        totalScore: levelState?.score ?? this.currentScore,
+        totalCoins: levelState?.coins ?? 0,
+        totalEnemiesDefeated: levelState?.enemiesDefeated ?? 0,
+      },
+      levels: {
+        [this.currentLevel]: {
+          highScore: levelState?.score ?? this.currentScore,
+          completed: false,
+          lastCheckpoint: checkpointNumber,
+        },
+      },
+      lastPosition: {
+        level: this.currentLevel,
+        x: Math.round(this.player.x),
+        y: Math.round(this.player.y),
+      },
+    };
+  }
+
+  /**
+   * Save checkpoint (called when player reaches a checkpoint).
+   * @param checkpointNumber Checkpoint number.
+   */
+  public saveCheckpoint(checkpointNumber: number): void {
+    if (this.saveManager) {
+      const checkpointData = this.createCheckpointData(checkpointNumber);
+      this.saveManager.saveAutoGame(checkpointData);
+      console.log(`Saved checkpoint ${checkpointNumber}`);
+    }
+  }
+
+  /**
+   * Parse gem type from item name.
+   * @param itemName The item name to parse.
+   * @returns The gem type.
+   */
+  private parseGemTypeFromName(
+    itemName: string,
+  ): "red" | "blue" | "green" | "purple" | "yellow" {
+    if (itemName.includes("blue")) return "blue";
+    if (itemName.includes("green")) return "green";
+    if (itemName.includes("purple")) return "purple";
+    if (itemName.includes("yellow")) return "yellow";
+    return "red";
+  }
+
+  /**
+   * Handle an item dropped from the player's inventory.
+   * @param data The dropped item data.
+   */
+  private handleDroppedItem(data: {
+    itemId: string;
+    config: any;
+    texture: string;
+    quantity: number;
+    position: { x: number; y: number };
+  }): void {
+    // Simplified handling - we can create items based on type
+    let droppedItem: Item | undefined;
+
+    // Handle based on item type
+    const itemType = data.config?.type || "misc";
+    const itemName = data.config?.name?.toLowerCase() || "";
+
+    if (itemName.includes("health") || itemName.includes("potion")) {
+      droppedItem = this.entityFactory?.createHealthPotion(
+        data.position.x,
+        data.position.y,
+        data.config,
+      );
+    } else if (itemName.includes("coin")) {
+      droppedItem = this.entityFactory?.createCoin(
+        data.position.x,
+        data.position.y,
+      );
+    } else if (itemType.includes("gem")) {
+      // For gems, we could parse the gem type from the item name
+      const gemType = this.parseGemTypeFromName(itemName);
+      droppedItem = this.entityFactory?.createGem(
+        gemType,
+        data.position.x,
+        data.position.y,
+        data.config,
+      );
+    }
+
+    if (droppedItem) {
+      this.items.push(droppedItem);
+
+      // Set up collision with player for pickup
+      if (this.physicsManager) {
+        this.physicsManager.setOverlap(
+          this.player,
+          droppedItem,
+          (playerObj, itemObj) => {
+            const player = playerObj as Player;
+            const item = itemObj as Item;
+            if (player.pickupItem(item, data.quantity)) {
+              this.audioService?.playSFX("item_pickup");
+              item.destroy();
+
+              // Remove from items array
+              const index = this.items.indexOf(item);
+              if (index > -1) {
+                this.items.splice(index, 1);
+              }
+            }
+          },
+        );
+      }
+    }
+  }
+
+  /**
+   * Enable or disable time attack mode.
+   * @param enabled Whether to enable time attack mode.
+   */
+  public setTimeAttackMode(enabled: boolean): void {
+    this.isTimeAttackMode = enabled;
+    if (this.timeAttackTimer) {
+      this.timeAttackTimer.setAlpha(enabled ? 1 : 0);
+    }
+    if (enabled) {
+      console.log("Time attack mode enabled");
+    }
+  }
+
+  /**
+   * Toggle minimap visibility.
+   */
+  public toggleMinimap(): void {
+    if (this.minimap) {
+      this.minimap.toggle();
+    }
+  }
+
+  /**
+   * Show/hide minimap.
+   * @param visible Whether to show the minimap.
+   */
+  public setMinimapVisible(visible: boolean): void {
+    if (this.minimap) {
+      if (visible) {
+        this.minimap.show();
+      } else {
+        this.minimap.hide();
+      }
+    }
+  }
+
+  /**
+   * Sync game state after reconnection.
+   * Called when the client successfully reconnects to the server.
+   */
+  private syncGameStateAfterReconnect(): void {
+    console.log("Syncing game state after reconnection");
+
+    // Re-send player state to server
+    if (this.player && this.networkService?.isConnected()) {
+      const syncData = this.player.getSyncData();
+      this.networkService["socket"]?.emit("player_sync", syncData);
+    }
+
+    // Request full game state from server
+    this.networkService?.["socket"]?.emit("request_full_state");
+
+    // Show reconnection success message
+    if (this.errorHandler) {
+      // Clear any error dialogs
+      this.errorHandler.clearErrors();
+    }
+  }
+
+  /**
+   * Return to main menu.
+   * Called when multiplayer connection fails completely.
+   */
+  private returnToMainMenu(): void {
+    console.log("Returning to main menu due to connection failure");
+
+    // Clean up multiplayer state
+    this.isMultiplayer = false;
+    this.roomId = undefined;
+
+    // Stop game loop
+    this.gameLoop?.stop();
+
+    // Disconnect from network
+    this.networkService?.disconnect();
+
+    // Transition to main menu
+    this.scene.start("MainMenuScene");
+  }
+
   destroy() {
     // Clean up
     this.gameLoop?.destroy();
+    this.saveManager?.destroy();
+    this.minimap?.destroy();
     eventBus.off("game:pause", this.openPauseMenu.bind(this));
     eventBus.off("game:resume", this.resumeGame.bind(this));
   }

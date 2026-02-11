@@ -5,6 +5,8 @@ import {
   AnimationManager,
   AnimationStateMachine,
 } from "../core/AnimationManager";
+import { Inventory } from "./Inventory";
+import { Item } from "./Item";
 
 /**
  * Player-specific configuration.
@@ -57,6 +59,23 @@ export class Player extends Character {
   /** Whether the player is currently attacking. */
   private isAttacking: boolean;
 
+  /** Combo system */
+  private comboCount: number = 0;
+  private comboMultiplier: number = 1.0;
+  private comboTimer: number = 0;
+  private comboDecayTime: number = 2000;
+  private maxComboMultiplier: number = 3.0;
+
+  /** Parry/Block system */
+  private isParrying: boolean = false;
+  private parryWindow: number = 200;
+  private parryCooldown: number = 1000;
+  private parryCooldownTimer: number = 0;
+  private parryStartTime: number = 0;
+  private perfectParryWindow: number = 50;
+  private wasPerfectParry: boolean = false;
+  private shieldSprite?: Phaser.GameObjects.Sprite;
+
   /** Cooldown timer for attack (ms). */
   private attackCooldown: number;
 
@@ -71,6 +90,9 @@ export class Player extends Character {
 
   /** Whether animations are initialized. */
   private animationsInitialized: boolean = false;
+
+  /** Player inventory for managing collected items. */
+  public inventory: Inventory;
 
   /**
    * Creates an instance of Player.
@@ -104,9 +126,23 @@ export class Player extends Character {
     this.equippedSkills = [];
     this.animationManager = config.animationManager;
 
+    // Initialize combo system
+    this.comboCount = 0;
+    this.comboMultiplier = 1.0;
+    this.comboTimer = 0;
+    this.maxComboMultiplier = 3.0;
+
+    // Initialize parry system
+    this.isParrying = false;
+    this.parryCooldownTimer = 0;
+    this.wasPerfectParry = false;
+
     // Initialize animation state machine
     this.animationStateMachine = new AnimationStateMachine();
     this.setupAnimationStates();
+
+    // Initialize inventory
+    this.inventory = new Inventory(scene, this.inventorySize);
 
     // Enable physics by default
     this.enablePhysics();
@@ -223,6 +259,22 @@ export class Player extends Character {
       }
     }
 
+    // Update combo decay timer
+    this.updateCombo(delta);
+
+    // Update parry cooldown timer
+    if (this.parryCooldownTimer > 0) {
+      this.parryCooldownTimer -= delta;
+    }
+
+    // Check parry window expiration
+    if (this.isParrying) {
+      const now = Date.now();
+      if (now - this.parryStartTime > this.parryWindow) {
+        this.endParry();
+      }
+    }
+
     // Handle input if InputManager is bound
     if (this.inputManager) {
       this.handleInput();
@@ -258,6 +310,11 @@ export class Player extends Character {
       this.attack();
     }
 
+    // Parry
+    if (this.inputManager.isActionActive("parry") && !this.isParrying) {
+      this.parry();
+    }
+
     // Optional: other actions (crouch, dash, etc.)
   }
 
@@ -270,6 +327,121 @@ export class Player extends Character {
       // Transition to jump animation
       this.animationStateMachine.transition("jump");
     }
+  }
+
+  /**
+   * Perform a parry/block action.
+   * Creates a temporary shield effect and reduces incoming damage.
+   */
+  public parry(): void {
+    if (this.isParrying || this.parryCooldownTimer > 0) return;
+
+    this.isParrying = true;
+    this.parryStartTime = Date.now();
+    this.parryCooldownTimer = this.parryCooldown;
+    this.wasPerfectParry = false;
+
+    // Create visual shield effect
+    this.createShieldEffect();
+
+    // Emit parry event
+    this.scene.events.emit("player:parry", { player: this });
+
+    // Schedule parry end
+    this.scene.time.delayedCall(this.parryWindow, () => {
+      this.endParry();
+    });
+  }
+
+  /**
+   * Create visual shield effect during parry.
+   */
+  private createShieldEffect(): void {
+    if (this.shieldSprite) return;
+
+    this.shieldSprite = this.scene.add.sprite(
+      this.x,
+      this.y,
+      "shield",
+    ) as Phaser.GameObjects.Sprite;
+    this.shieldSprite.setTint(0x4caf50);
+    this.shieldSprite.setAlpha(0.6);
+
+    // Animate shield scale and rotation
+    this.scene.tweens.add({
+      targets: this.shieldSprite,
+      scaleX: 1.2,
+      scaleY: 1.2,
+      angle: 360,
+      duration: this.parryWindow,
+      ease: "Sine.easeInOut",
+      onComplete: () => {
+        if (this.shieldSprite) {
+          this.shieldSprite.destroy();
+          this.shieldSprite = undefined;
+        }
+      },
+    });
+  }
+
+  /**
+   * End parry window and cleanup.
+   */
+  private endParry(): void {
+    this.isParrying = false;
+
+    if (this.shieldSprite) {
+      this.shieldSprite.destroy();
+      this.shieldSprite = undefined;
+    }
+
+    // Emit parry end event
+    this.scene.events.emit("player:parry-end", { player: this });
+  }
+
+  /**
+   * Check if player successfully perfect parried an attack.
+   * @returns True if the parry was within the perfect window.
+   */
+  public checkPerfectParry(): boolean {
+    if (!this.isParrying) return false;
+
+    const timeSinceParryStart = Date.now() - this.parryStartTime;
+    if (timeSinceParryStart <= this.perfectParryWindow) {
+      this.wasPerfectParry = true;
+
+      // Perfect parry bonus effects
+      this.scene.events.emit("player:perfect-parry", { player: this });
+
+      // Visual feedback
+      this.scene.tweens.add({
+        targets: this,
+        tint: 0xffff00,
+        duration: 100,
+        yoyo: true,
+        hold: 100,
+        onYoyo: () => {
+          this.clearTint();
+        },
+      });
+
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Get current parry state.
+   */
+  public isParryActive(): boolean {
+    return this.isParrying;
+  }
+
+  /**
+   * Get remaining parry cooldown time (ms).
+   */
+  public getParryCooldownRemaining(): number {
+    return Math.max(0, this.parryCooldownTimer);
   }
 
   /**
@@ -294,8 +466,13 @@ export class Player extends Character {
       );
     }
 
-    // Emit event or deal damage to nearby enemies
-    this.scene.events.emit("player:attack", { player: this });
+    // Emit attack event with combo data
+    this.scene.events.emit("player:attack", {
+      player: this,
+      comboCount: this.comboCount,
+      comboMultiplier: this.comboMultiplier,
+      attackDamage: this.getAttackDamage(),
+    });
   }
 
   /**
@@ -373,6 +550,91 @@ export class Player extends Character {
   }
 
   /**
+   * Increment combo counter on successful hit/kill
+   * @param hits Number of enemies hit in this attack
+   */
+  public incrementCombo(hits: number = 1): void {
+    this.comboCount += hits;
+    this.comboTimer = 0;
+    this.recalculateMultiplier();
+  }
+
+  /**
+   * Reset combo (on getting hit or missing)
+   */
+  public resetCombo(): void {
+    this.comboCount = 0;
+    this.comboMultiplier = 1.0;
+    this.comboTimer = 0;
+  }
+
+  /**
+   * Recalculate combo multiplier based on combo count
+   */
+  private recalculateMultiplier(): void {
+    if (this.comboCount > 0) {
+      this.comboMultiplier = Math.min(
+        1.0 + this.comboCount * 0.2,
+        this.maxComboMultiplier,
+      );
+    } else {
+      this.comboMultiplier = 1.0;
+    }
+  }
+
+  /**
+   * Get current combo multiplier
+   */
+  public getComboMultiplier(): number {
+    return this.comboMultiplier;
+  }
+
+  /**
+   * Get current combo count
+   */
+  public getComboCount(): number {
+    return this.comboCount;
+  }
+
+  /**
+   * Update combo decay timer
+   */
+  public updateCombo(delta: number): void {
+    if (this.comboCount > 0) {
+      this.comboTimer += delta;
+
+      if (this.comboTimer >= this.comboDecayTime) {
+        this.resetCombo();
+      }
+    }
+  }
+
+  /**
+   * Deal attack damage with combo multiplier applied
+   * @param baseDamage Base damage value
+   * @returns Total damage with combo applied
+   */
+  public getAttackDamage(baseDamage: number = 1): number {
+    return Math.ceil(baseDamage * this.comboMultiplier);
+  }
+
+  /**
+   * Called when enemy is successfully hit by player attack
+   * Increments combo and emits combo event
+   */
+  public onEnemyHit(): void {
+    const prevCount = this.comboCount;
+    this.incrementCombo(1);
+    this.scene.events.emit("player:combo-changed", {
+      player: this,
+      comboCount: this.comboCount,
+      comboMultiplier: this.comboMultiplier,
+      wasNewCombo:
+        this.comboCount === 1 || (prevCount > 0 && this.comboCount > prevCount),
+    });
+  }
+
+  /**
    * Equip a skill.
    * @param skillId Skill identifier.
    */
@@ -380,6 +642,199 @@ export class Player extends Character {
     if (!this.equippedSkills.includes(skillId)) {
       this.equippedSkills.push(skillId);
     }
+  }
+
+  /**
+   * Take damage and reset combo on hit.
+   * Also handles parry timing checks if parrying.
+   * @param amount Damage amount.
+   * @returns True if still alive.
+   */
+  public takeDamage(amount: number): boolean {
+    let actualDamage = amount;
+
+    // Check for parry
+    if (this.isParrying) {
+      const isPerfectParry = this.checkPerfectParry();
+
+      if (isPerfectParry) {
+        // Perfect parry: nullify damage completely and trigger bonus
+        actualDamage = 0;
+
+        // End parry early on successful parry
+        this.endParry();
+
+        // Perfect parry counter-attack bonus (combo multiplier boost)
+        this.incrementCombo(2);
+        this.scene.events.emit("player:parry-successful", {
+          player: this,
+          perfectParry: true,
+        });
+      } else {
+        // Regular parry: reduce damage by 75-90%
+        actualDamage = Math.ceil(amount * 0.2);
+        this.scene.events.emit("player:parry-successful", {
+          player: this,
+          perfectParry: false,
+        });
+      }
+    }
+
+    // Reset combo when taking damage (only if damage > 0)
+    if (actualDamage > 0) {
+      this.resetCombo();
+      this.scene.events.emit("player:combo-reset", {
+        player: this,
+        reason: "damage",
+      });
+    }
+
+    return super.takeDamage(actualDamage);
+  }
+
+  /**
+   * Pick up an item and add it to inventory.
+   * @param item The item to pick up.
+   * @param quantity The quantity to pick up (defaults to 1).
+   * @returns True if the item was successfully picked up.
+   */
+  public pickupItem(item: Item, quantity: number = 1): boolean {
+    const success = this.inventory.addItem(item, quantity);
+    if (success) {
+      this.scene.events.emit("player:item-picked-up", {
+        player: this,
+        item,
+        quantity,
+      });
+    }
+    return success;
+  }
+
+  /**
+   * Use an item from inventory.
+   * @param itemId The ID of the item to use.
+   * @returns True if the item was successfully used.
+   */
+  public useItem(itemId: string): boolean {
+    const slotIndex = this.inventory
+      .getAllInventoryData()
+      .findIndex((slot) => slot.item?.id === itemId);
+
+    if (slotIndex === -1) {
+      this.scene.events.emit("player:item-use-failed", {
+        player: this,
+        itemId,
+        reason: "not_found",
+      });
+      return false;
+    }
+
+    const slot = this.inventory.getSlot(slotIndex);
+    if (!slot?.item) {
+      return false;
+    }
+
+    // Apply item effects based on type
+    let itemUsed = false;
+
+    switch (slot.item.config.type) {
+      case "consumable":
+        // Handle consumable items (health potions, etc.)
+        if (slot.item.config.value) {
+          if (slot.item.config.name.toLowerCase().includes("health")) {
+            const healAmount = Math.min(
+              slot.item.config.value,
+              this.maxHealth - this.health,
+            );
+            if (healAmount > 0) {
+              this.health = Math.min(this.maxHealth, this.health + healAmount);
+              this.scene.events.emit("player:healed", {
+                player: this,
+                amount: healAmount,
+              });
+              itemUsed = true;
+            }
+          }
+        }
+        break;
+
+      case "powerup":
+        // Handle power-up items
+        this.scene.events.emit("player:powerup-used", {
+          player: this,
+          item: slot.item,
+        });
+        itemUsed = true;
+        break;
+
+      default:
+        break;
+    }
+
+    if (itemUsed) {
+      // Remove one from inventory
+      this.inventory.removeItem(itemId, 1);
+      this.scene.events.emit("player:item-used", {
+        player: this,
+        itemId,
+        item: slot.item,
+      });
+    }
+
+    return itemUsed;
+  }
+
+  /**
+   * Drop an item from inventory at current position.
+   * @param slotIndex The slot index to drop from.
+   * @param quantity The quantity to drop (defaults to all).
+   * @returns The dropped item data, or undefined if failed.
+   */
+  public dropItem(slotIndex: number, quantity?: number) {
+    const position = { x: this.x, y: this.y };
+    return this.inventory.dropItem(slotIndex, position, quantity);
+  }
+
+  /**
+   * Get player's inventory.
+   * @returns The player's inventory object.
+   */
+  public getInventory(): Inventory {
+    return this.inventory;
+  }
+
+  /**
+   * Get player progress data for saving.
+   * @returns Serializable player progress data.
+   */
+  public getProgressData(): {
+    health: number;
+    maxHealth: number;
+    inventory: any[];
+  } {
+    return {
+      health: this.health,
+      maxHealth: this.maxHealth,
+      inventory: this.inventory.serialize(),
+    };
+  }
+
+  /**
+   * Apply saved progress data to player.
+   * @param progressData The progress data to apply.
+   * @param getItemById Function to retrieve items by ID for inventory deserialization.
+   */
+  public applyProgressData(
+    progressData: {
+      health: number;
+      maxHealth: number;
+      inventory: any[];
+    },
+    getItemById: (id: string) => any,
+  ): void {
+    this.health = Math.min(progressData.health, progressData.maxHealth);
+    this.maxHealth = progressData.maxHealth;
+    this.inventory.deserialize(progressData.inventory, getItemById);
   }
 
   /**
@@ -442,6 +897,11 @@ export class Player extends Character {
         );
       }
     }
+    // Sync inventory data (less critical, send this separately or on less frequent interval)
+    if (data.inventory) {
+      // Implementation would need items by ID - currently just logging
+      console.log("Inventory sync data received from server");
+    }
   }
 
   /**
@@ -455,6 +915,7 @@ export class Player extends Character {
       health: this.health,
       facing: this.facing,
       animationState: this.animationState,
+      // Inventory is serialized separately for bandwidth efficiency
     };
   }
 

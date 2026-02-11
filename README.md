@@ -2,22 +2,75 @@
 
 A multiplayer platformer game built with Phaser 3, Node.js, Socket.IO, and TypeScript.
 
+## Project Status
+
+**Current Version:** v1.0.0-alpha  
+**Completion Status:** ~90% MVP Complete  
+**Latest Update:** All core phases (1, 2, 4) COMPLETE ✅
+
+### Completed Phases:
+
+- ✅ Phase 1: Polish & Audio (animations, particles, audio system, UI improvements)
+- ✅ Phase 2: Content Expansion (3 levels, 4 enemy types, 5 hazards, 5 power-ups, 5 gem types)
+- ✅ Phase 4: Multiplayer & Networking (real-time sync, lobby system, interpolation)
+
+### In Progress:
+
+- 🟡 Phase 3: Combat & Systems Enhancement
+
+## Quick Start
+
+### Development
+
+Start the client and server in development mode:
+
+```bash
+npm run dev
+```
+
+This starts:
+
+- Client on http://localhost:3000
+- Server on http://localhost:4000
+
+### Multiplayer
+
+For multiplayer, run:
+
+```bash
+# Terminal 1 - Server
+cd server && npm start
+
+# Terminal 2 - Client
+cd client && npm run dev
+```
+
+Then click "Multiplayer" in the main menu to join/create a lobby.
+
+## Game Features
+
+### Single Player
+
+- **3 Themed Maps:** Forest, Cave, and Sky levels
+- **4 Enemy Types:** Slime, Flying, Archer, and Boss (3-phase fight)
+- **5 Environmental Hazards:** Spikes, Lava, Saw Blades, Fire, Acid
+- **5 Power-ups:** Double Jump, Shield, Speed Boost, Health Boost, Damage Boost
+- **5 Gem Types:** Red, Blue, Green, Purple, Yellow (common to legendary)
+- **Complete Animation System:** Player and enemy sprite animations
+- **Audio System:** SFX and music with volume controls
+- **Particle Effects:** Visual feedback for all game actions
+- **Level Selection Menu:** Choose from unlocked levels
+
+### Multiplayer
+
+- **Real-time Synchronization:** 20Hz server tick rate
+- **Lobby System:** Create/join rooms, share room codes
+- **2-4 Players:** Cooperative gameplay
+- **Interpolation:** Smooth remote player movement
+- **Connection Events:** Toast notifications for join/leave
+- **Player Prediction:** Input sequence-based client prediction
+
 ## Project Structure
-
-```
-phaser-platformer/
-├── client/                 # Phaser 3 TypeScript frontend
-├── server/                 # Node.js backend with Socket.IO
-├── shared/                 # Shared TypeScript interfaces & utilities
-├── infrastructure/         # Docker, Kubernetes, Terraform
-├── docs/                   # Documentation
-├── tests/                  # Test suites
-├── scripts/                # Build/deployment scripts
-├── logs/                   # Log files (auto-generated)
-└── results/                # Script results (auto-generated)
-```
-
-## Getting Started
 
 ### Prerequisites
 
@@ -37,12 +90,14 @@ Run the script from the project root:
 ```
 
 Options:
+
 - `--skip-deps` – Skip dependency installation (useful if you already have them)
 - `--skip-db` – Skip PostgreSQL setup
 - `--skip-redis` – Skip Redis installation
 - `--skip-build` – Skip building the project
 
 The script will:
+
 1. Fix known dependency issues (ajv, schema-utils, webpack compatibility)
 2. Install PostgreSQL and Redis (if not present) and start services
 3. Create the `phaser_platformer` database and user
@@ -91,6 +146,7 @@ npm run dev
 ```
 
 This will start:
+
 - Client on http://localhost:3000 (via webpack-dev-server)
 - Server on http://localhost:4000 (Express + Socket.IO)
 
@@ -101,6 +157,7 @@ npm run build
 ```
 
 Outputs:
+
 - `client/dist/` – Bundled static assets
 - `server/dist/` – Compiled Node.js server
 

@@ -2,6 +2,8 @@ import "phaser";
 import { BootScene } from "./scenes/BootScene";
 import { PreloadScene } from "./scenes/PreloadScene";
 import { MainMenuScene } from "./scenes/MainMenuScene";
+import { LobbyScene } from "./scenes/LobbyScene";
+import { LevelSelectScene } from "./scenes/LevelSelectScene";
 import { GameScene } from "./scenes/GameScene";
 import { PauseScene } from "./scenes/PauseScene";
 import { GameOverScene } from "./scenes/GameOverScene";
@@ -16,6 +18,8 @@ const config: Phaser.Types.Core.GameConfig = {
     BootScene,
     PreloadScene,
     MainMenuScene,
+    LobbyScene,
+    LevelSelectScene,
     GameScene,
     PauseScene,
     GameOverScene,

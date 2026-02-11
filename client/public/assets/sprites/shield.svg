@@ -1,0 +1,19 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shield-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Shield body -->
+  <path d="M 4 4 L 28 4 L 28 12 Q 28 24 16 28 Q 4 24 4 12 Z"
+        stroke="#4CAF50" stroke-width="1.5" fill="none" opacity="0.8" filter="url(#shield-glow)"/>
+
+  <!-- Inner shield detail -->
+  <circle cx="16" cy="14" r="4"
+          stroke="#4CAF50" stroke-width="1" fill="none" opacity="0.6"/>
+
+  <!-- Shield shine -->
+  <path d="M 6 6 L 10 6 L 8 10 Z" fill="#4CAF50" opacity="0.9"/>
+</svg>
