@@ -5,6 +5,7 @@ module.exports = {
   roots: ['<rootDir>/src', '<rootDir>/tests'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '^phaser$': '<rootDir>/tests/__mocks__/phaser.js',
   },
   testMatch: [
     '<rootDir>/tests/unit/**/*.test.ts',
