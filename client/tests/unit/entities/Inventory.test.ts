@@ -357,5 +357,273 @@ describe('Inventory', () => {
       const slot = inventory.getSlot(0);
       expect(slot?.quantity).toBe(0);
     });
+
+    it('should return undefined for invalid index', () => {
+      const slot = inventory.getSlot(100);
+      expect(slot).toBeUndefined();
+    });
+
+    it('should return undefined for negative index', () => {
+      const slot = inventory.getSlot(-1);
+      expect(slot).toBeUndefined();
+    });
+  });
+
+  describe('swapSlots', () => {
+    it('should swap items between two slots', () => {
+      const mockItem1 = {
+        id: 'sword-1',
+        name: 'Iron Sword',
+        type: 'weapon',
+        rarity: 'common',
+        description: 'A basic iron sword',
+        spriteKey: 'items',
+        frame: 1,
+        value: 10,
+        metadata: { damage: 5 },
+      } as unknown as Item;
+      
+      const mockItem2 = {
+        id: 'potion-1',
+        name: 'Health Potion',
+        type: 'consumable',
+        rarity: 'common',
+        description: 'Restores health',
+        spriteKey: 'items',
+        frame: 2,
+        value: 5,
+        metadata: { healAmount: 10 },
+      } as unknown as Item;
+      
+      inventory.addItem(mockItem1, 3);
+      inventory.addItem(mockItem2, 2);
+      const result = inventory.swapSlots(0, 1);
+      expect(result).toBe(true);
+    });
+
+    it('should return false for invalid first index', () => {
+      const mockItem = {
+        id: 'sword-1',
+        name: 'Iron Sword',
+        type: 'weapon',
+        rarity: 'common',
+        description: 'A basic iron sword',
+        spriteKey: 'items',
+        frame: 1,
+        value: 10,
+        metadata: { damage: 5 },
+      } as unknown as Item;
+      
+      inventory.addItem(mockItem, 1);
+      const result = inventory.swapSlots(100, 0);
+      expect(result).toBe(false);
+    });
+
+    it('should return false for invalid second index', () => {
+      const mockItem = {
+        id: 'sword-1',
+        name: 'Iron Sword',
+        type: 'weapon',
+        rarity: 'common',
+        description: 'A basic iron sword',
+        spriteKey: 'items',
+        frame: 1,
+        value: 10,
+        metadata: { damage: 5 },
+      } as unknown as Item;
+      
+      inventory.addItem(mockItem, 1);
+      const result = inventory.swapSlots(0, 100);
+      expect(result).toBe(false);
+    });
+
+    it('should return false for same slot indices', () => {
+      const mockItem = {
+        id: 'sword-1',
+        name: 'Iron Sword',
+        type: 'weapon',
+        rarity: 'common',
+        description: 'A basic iron sword',
+        spriteKey: 'items',
+        frame: 1,
+        value: 10,
+        metadata: { damage: 5 },
+      } as unknown as Item;
+      
+      inventory.addItem(mockItem, 1);
+      const result = inventory.swapSlots(0, 0);
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('clearSlot', () => {
+    it('should clear a slot with items', () => {
+      const mockItem = {
+        id: 'sword-1',
+        name: 'Iron Sword',
+        type: 'weapon',
+        rarity: 'common',
+        description: 'A basic iron sword',
+        spriteKey: 'items',
+        frame: 1,
+        value: 10,
+        metadata: { damage: 5 },
+      } as unknown as Item;
+      
+      inventory.addItem(mockItem, 5);
+      const result = inventory.clearSlot(0);
+      expect(result).toBe(true);
+      expect(inventory.getOccupiedSlots()).toBe(0);
+    });
+
+    it('should return false for invalid index', () => {
+      const result = inventory.clearSlot(100);
+      expect(result).toBe(false);
+    });
+
+    it('should return false for empty slot', () => {
+      const result = inventory.clearSlot(0);
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('dropItem', () => {
+    it('should drop item from inventory', () => {
+      const mockItem = {
+        id: 'sword-1',
+        name: 'Iron Sword',
+        type: 'weapon',
+        rarity: 'common',
+        description: 'A basic iron sword',
+        spriteKey: 'items',
+        frame: 1,
+        value: 10,
+        metadata: { damage: 5 },
+        texture: { key: 'items' },
+        config: {},
+      } as unknown as Item;
+      
+      inventory.addItem(mockItem, 5);
+      const result = inventory.dropItem(0, { x: 100, y: 200 });
+      expect(result).toBeDefined();
+      expect(result?.quantity).toBe(5);
+      expect(result?.item.id).toBe('sword-1');
+      expect(result?.position).toEqual({ x: 100, y: 200 });
+    });
+
+    it('should drop partial quantity', () => {
+      const mockItem = {
+        id: 'sword-1',
+        name: 'Iron Sword',
+        type: 'weapon',
+        rarity: 'common',
+        description: 'A basic iron sword',
+        spriteKey: 'items',
+        frame: 1,
+        value: 10,
+        metadata: { damage: 5 },
+        texture: { key: 'items' },
+        config: {},
+      } as unknown as Item;
+      
+      inventory.addItem(mockItem, 5);
+      const result = inventory.dropItem(0, { x: 100, y: 200 }, 2);
+      expect(result?.quantity).toBe(2);
+      expect(inventory.getItemQuantity(mockItem.id)).toBe(3);
+    });
+
+    it('should return undefined for invalid slot index', () => {
+      const result = inventory.dropItem(100, { x: 100, y: 200 });
+      expect(result).toBeUndefined();
+    });
+
+    it('should return undefined for empty slot', () => {
+      const result = inventory.dropItem(0, { x: 100, y: 200 });
+      expect(result).toBeUndefined();
+    });
+  });
+
+  describe('UI methods', () => {
+    it('should show UI', () => {
+      inventory.showUI();
+      expect(inventory.isUIVisible()).toBe(true);
+    });
+
+    it('should hide UI', () => {
+      inventory.showUI();
+      inventory.hideUI();
+      expect(inventory.isUIVisible()).toBe(false);
+    });
+
+    it('should toggle UI from hidden to visible', () => {
+      inventory.toggleUI();
+      expect(inventory.isUIVisible()).toBe(true);
+    });
+
+    it('should toggle UI from visible to hidden', () => {
+      inventory.showUI();
+      inventory.toggleUI();
+      expect(inventory.isUIVisible()).toBe(false);
+    });
+  });
+
+  describe('serialize/deserialize', () => {
+    it('should serialize empty inventory', () => {
+      const data = inventory.serialize();
+      expect(data).toHaveLength(10);
+    });
+
+    it('should serialize and deserialize inventory', () => {
+      const mockItem = {
+        id: 'sword-1',
+        name: 'Iron Sword',
+        type: 'weapon',
+        rarity: 'common',
+        description: 'A basic iron sword',
+        spriteKey: 'items',
+        frame: 1,
+        value: 10,
+        metadata: { damage: 5 },
+        config: {},
+        texture: { key: 'items' },
+      } as unknown as Item;
+      
+      inventory.addItem(mockItem, 5);
+      const data = inventory.serialize();
+      
+      const newInventory = new Inventory(mockScene, 10);
+      const getItemById = (id: string) => id === 'sword-1' ? mockItem : undefined;
+      newInventory.deserialize(data, getItemById);
+      
+      expect(newInventory.getItemQuantity('sword-1')).toBe(5);
+    });
+  });
+
+  describe('getAllInventoryData', () => {
+    it('should return all inventory data', () => {
+      const mockItem = {
+        id: 'sword-1',
+        name: 'Iron Sword',
+        type: 'weapon',
+        rarity: 'common',
+        description: 'A basic iron sword',
+        spriteKey: 'items',
+        frame: 1,
+        value: 10,
+        metadata: { damage: 5 },
+      } as unknown as Item;
+      
+      inventory.addItem(mockItem, 5);
+      const data = inventory.getAllInventoryData();
+      expect(data).toHaveLength(10);
+      expect(data[0].quantity).toBe(5);
+    });
+  });
+
+  describe('destroy', () => {
+    it('should destroy inventory', () => {
+      inventory.destroy();
+      expect(inventory.getOccupiedSlots()).toBe(0);
+    });
   });
 });
