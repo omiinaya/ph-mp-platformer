@@ -34,6 +34,45 @@ const mockSprite = jest.fn().mockImplementation(function(this: any) {
   };
 });
 
+// Mock EventEmitter for Phaser
+class MockEventEmitter {
+  constructor() {
+    this._events = {};
+  }
+  on(event, callback) {
+    this._events[event] = this._events[event] || [];
+    this._events[event].push(callback);
+    return this;
+  }
+  off(event, callback) {
+    if (this._events[event]) {
+      this._events[event] = this._events[event].filter(cb => cb !== callback);
+    }
+    return this;
+  }
+  emit(event, ...args) {
+    if (this._events[event]) {
+      this._events[event].forEach(cb => cb(...args));
+    }
+    return this;
+  }
+  once(event, callback) {
+    const wrapper = (...args) => {
+      callback(...args);
+      this.off(event, wrapper);
+    };
+    return this.on(event, wrapper);
+  }
+  removeAllListeners(event) {
+    if (event) {
+      delete this._events[event];
+    } else {
+      this._events = {};
+    }
+    return this;
+  }
+}
+
 class MockVector2 {
   x = 0;
   y = 0;
@@ -52,11 +91,28 @@ class MockVector3 {
 
 const Phaser = {
   Game: jest.fn(),
+  Events: {
+    EventEmitter: MockEventEmitter,
+  },
   Scene: jest.fn().mockImplementation(() => ({
     add: {
       sprite: jest.fn().mockReturnValue({
         setPosition: jest.fn().mockReturnThis(),
         setDepth: jest.fn().mockReturnThis(),
+        destroy: jest.fn(),
+      }),
+      text: jest.fn().mockReturnValue({
+        setOrigin: jest.fn().mockReturnThis(),
+        setText: jest.fn().mockReturnThis(),
+        setColor: jest.fn().mockReturnThis(),
+        setAlpha: jest.fn().mockReturnThis(),
+        setInteractive: jest.fn().mockReturnThis(),
+        on: jest.fn().mockReturnThis(),
+        setData: jest.fn().mockReturnThis(),
+        destroy: jest.fn(),
+      }),
+      rectangle: jest.fn().mockReturnValue({
+        setOrigin: jest.fn().mockReturnThis(),
         destroy: jest.fn(),
       }),
     },
