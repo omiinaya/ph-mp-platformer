@@ -1,0 +1,52 @@
+# Git configuration
+
+# Treat as text
+* text=auto
+
+# Force text files
+*.md text
+*.ts text
+*.js text
+*.json text
+*.yml text
+*.yaml text
+*.sh text
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.svg binary
+*.mp3 binary
+*.wav binary
+*.ogg binary
+*.ttf binary
+*.eot binary
+*.woff binary
+*.woff2 binary
+
+# Webpack build outputs
+client/dist binary
+server/dist binary
+
+# Node modules
+node_modules/ export-ignore
+*/node_modules/ export-ignore
+
+# Build outputs
+*.log
+dist/
+build/
+coverage/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
