@@ -37,7 +37,7 @@
     "@typescript-eslint/parser": "^6.21.0",
     "canvas": "^3.2.1",
     "concurrently": "^8.2.2",
-    "eslint": "^8.0.0",
+    "eslint": "^8.57.0",
     "prettier": "^3.0.0",
     "puppeteer": "^24.34.0",
     "typedoc": "^0.28.15",
