@@ -128,9 +128,9 @@ export abstract class Enemy extends Character {
    * @param delta Time delta in milliseconds.
    */
   public update(_delta: number): void {
-    super.update(delta);
+    super.update(_delta);
 
-    this.stateTimer += delta;
+    this.stateTimer += _delta;
 
     // Find target if not already set
     if (!this.target) {
@@ -139,25 +139,25 @@ export abstract class Enemy extends Character {
 
     // Update attack pattern manager
     if (this.useAttackPatterns && this.attackManager) {
-      this.attackManager.update(delta);
+      this.attackManager.update(_delta);
     }
 
     // State machine
     switch (this.aiState) {
     case 'idle':
-      this.updateIdle(delta);
+      this.updateIdle(_delta);
       break;
     case 'patrol':
-      this.updatePatrol(delta);
+      this.updatePatrol(_delta);
       break;
     case 'chase':
-      this.updateChase(delta);
+      this.updateChase(_delta);
       break;
     case 'attack':
-      this.updateAttack(delta);
+      this.updateAttack(_delta);
       break;
     case 'flee':
-      this.updateFlee(delta);
+      this.updateFlee(_delta);
       break;
     case 'dead':
       // Do nothing
@@ -232,7 +232,7 @@ export abstract class Enemy extends Character {
     this.move(this.patrolDirection);
 
     // Change direction periodically
-    this.patrolTimer += delta;
+    this.patrolTimer += _delta;
     if (this.patrolTimer >= this.aiConfig.patrolChangeTime!) {
       this.patrolDirection *= -1;
       this.patrolTimer = 0;
@@ -472,7 +472,7 @@ export class FlyingEnemy extends Enemy {
 
   public update(_delta: number): void {
     // Override to ignore ground detection
-    super.update(delta);
+    super.update(_delta);
     // Flying enemies ignore ground collisions
     this.isOnGround = false;
   }
@@ -482,7 +482,7 @@ export class FlyingEnemy extends Enemy {
     this.velocity.x = this.patrolDirection * this.aiConfig.patrolSpeed!;
     this.velocity.y = Math.sin(this.stateTimer / 500) * 50;
 
-    this.patrolTimer += delta;
+    this.patrolTimer += _delta;
     if (this.patrolTimer >= this.aiConfig.patrolChangeTime!) {
       this.patrolDirection *= -1;
       this.patrolTimer = 0;
@@ -529,7 +529,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
   }
 
   public update(_delta: number): void {
-    this.lifetimeTimer += delta;
+    this.lifetimeTimer += _delta;
     if (this.lifetimeTimer >= this.lifetime) {
       this.destroy();
     }
@@ -677,7 +677,7 @@ export class Archer extends Enemy {
       }
     } else {
       // Fall back to default behavior
-      this.lastShotTime += delta;
+      this.lastShotTime += _delta;
       if (this.lastShotTime >= this.shotCooldown) {
         this.shoot();
         this.lastShotTime = 0;
@@ -859,7 +859,7 @@ export class AdvancedEnemy extends Enemy {
         }
       }
     } else {
-      super.updateAttack(delta);
+      super.updateAttack(_delta);
     }
   }
 }
