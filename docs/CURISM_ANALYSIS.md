@@ -9,7 +9,7 @@
 ### Hard Skills (30%)
 | Metric | Score | Status |
 |--------|-------|--------|
-| Reliability (Tests) | 100% | ✅ All 1004 tests pass (380 server + 624 client, 1 skipped) |
+| Reliability (Tests) | 100% | ✅ All 1020 tests pass (396 server + 624 client, 1 skipped) |
 | Security | 100% | ✅ 0 vulnerabilities in production deps |
 | Maintainability | 100% | ✅ 0 lint warnings |
 
@@ -50,18 +50,16 @@
 
 ## Recent Improvements (2026-02-18)
 
-1. ✅ Added PlayerStatsRepository coverage tests (+4 tests)
-   - Test for kills increment callback
-   - Test for deaths increment callback
-   - Test for score update callback
-   - Test for playTime update callback
-2. ✅ Added MatchmakingWorker successful process() test (+1 test)
-3. ✅ Added InventoryService transaction callback test (+1 test)
-4. ✅ Test count: 1004 total (380 server + 624 client, 1 skipped)
-5. ✅ PlayerStatsRepository coverage: 71.42% → 100% ✅
-6. ✅ MatchmakingWorker coverage: 86.84% → 100% ✅
-7. ✅ 0 lint warnings maintained
-8. ✅ All tests passing
+1. ✅ Added CacheService TTL fallback test (+1 test)
+   - Test for undefined defaultTtl configuration
+2. ✅ Added InventoryService error handling test (+1 test)
+   - Test for transaction promise rejection
+3. ✅ Fixed unnecessary nullish coalescing in CacheService
+   - Removed dead code (defaultTtl is always set in constructor)
+4. ✅ Test count: 1020 total (396 server + 624 client, 1 skipped)
+5. ✅ CacheService coverage: 92.3% → 100% ✅
+6. ✅ 0 lint warnings maintained
+7. ✅ All tests passing
 
 ---
 
@@ -79,9 +77,11 @@
 | UnlockableRepository | 100% | ✅ Perfect |
 | PlayerUnlockRepository | 100% | ✅ Perfect |
 | BaseRepository | 100% | ✅ Perfect |
-| GameSync | 63% | ✅ Good (improved from 59%) |
-| Matchmaker | 75% | ✅ Good (improved from 52%) |
-| MatchmakingWorker | 87% | ✅ Excellent |
+| PlayerStatsRepository | 100% | ✅ Perfect |
+| CacheService | 100% | ✅ Perfect |
+| MatchmakingWorker | 100% | ✅ Perfect |
+| Matchmaker | 75% | ✅ Good |
+| GameSync | ~63% | ✅ Good |
 | AnimationManager (client) | ~70% | ✅ Good |
 | AudioService (client) | ~60% | ✅ Good |
 
@@ -117,10 +117,10 @@
 
 | Type | Count | Status |
 |------|-------|--------|
-| Server Unit | 388 | ✅ All pass |
+| Server Unit | 396 | ✅ All pass |
 | Client Unit | 624 | ✅ All pass |
 | Skipped | 1 | ℹ️ Intentional |
-| **Total** | **1012** | **✅ 100% pass** |
+| **Total** | **1020** | **✅ 100% pass** |
 
 ---
 

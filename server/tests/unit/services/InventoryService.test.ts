@@ -183,6 +183,18 @@ describe('InventoryService', () => {
 
       expect(result).toBe(false);
     });
+
+    it('should catch error from transaction promise chain', async () => {
+      // Make transaction return a promise that rejects
+      // This directly tests the .catch() handler in the service
+      (AppDataSource.transaction as jest.Mock).mockResolvedValue(
+        Promise.reject(new Error('Transaction error'))
+      );
+
+      const result = await inventoryService.transferItem('player1', 'player2', 'sword', 1);
+
+      expect(result).toBe(false);
+    });
   });
 
   describe('getItemCount', () => {

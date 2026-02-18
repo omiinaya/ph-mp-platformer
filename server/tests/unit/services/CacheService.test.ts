@@ -196,5 +196,18 @@ describe('CacheService', () => {
       jest.advanceTimersByTime(2000);
       expect(cacheService.get('key')).toBeUndefined();
     });
+
+    it('should use fallback TTL when config.defaultTtl is undefined', () => {
+      // Create service with undefined defaultTtl to cover the ?? branch
+      const serviceWithNoTtl = new CacheService({ cleanupInterval: 60000 });
+      serviceWithNoTtl.set('key', 'value');
+      
+      // Advance time but less than fallback TTL (5 minutes = 300000ms)
+      jest.advanceTimersByTime(299999);
+      expect(serviceWithNoTtl.get('key')).toBe('value');
+      
+      serviceWithNoTtl.stopCleanup();
+      serviceWithNoTtl.clear();
+    });
   });
 });
