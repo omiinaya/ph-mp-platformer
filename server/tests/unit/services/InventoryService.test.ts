@@ -146,6 +146,16 @@ describe('InventoryService', () => {
 
       expect(result).toBe(false);
     });
+
+    it('should handle transaction rejection and return false', async () => {
+      // Simulate transaction throwing an error that's caught by .catch
+      const mockTransaction = jest.fn().mockRejectedValue(new Error('Source player does not have enough items'));
+      (AppDataSource.transaction as jest.Mock).mockImplementation(mockTransaction);
+
+      const result = await inventoryService.transferItem('player1', 'player2', 'sword', 1);
+
+      expect(result).toBe(false);
+    });
   });
 
   describe('getItemCount', () => {
