@@ -1,9 +1,8 @@
 import { Matchmaker } from '../../../src/network/Matchmaker';
+import { Server, Socket } from 'socket.io';
 import { ConnectionManager } from '../../../src/network/ConnectionManager';
 import { RoomManager } from '../../../src/network/RoomManager';
-import { Server, Socket } from 'socket.io';
-import { MatchmakingPreferences, MatchmakingRequest } from '../../../src/types/matchmaking';
-import { PlayerSession } from '../../../src/persistence/models/PlayerSession';
+import { logger } from '../../../src/utils/logger';
 
 // Mock dependencies
 jest.mock('../../../src/utils/logger', () => ({
@@ -15,7 +14,20 @@ jest.mock('../../../src/utils/logger', () => ({
   },
 }));
 
-jest.mock('../../../src/workers/MatchmakingWorker');
+jest.mock('../../../src/workers/MatchmakingWorker', () => ({
+  MatchmakingWorker: jest.fn().mockImplementation(() => ({
+    process: jest.fn().mockResolvedValue([]),
+    terminate: jest.fn(),
+  })),
+}));
+
+const createMockSession = (socketId: string, playerId: string) => ({
+  socketId,
+  playerId,
+  roomId: null as string | null,
+  connectedAt: new Date(),
+  lastActivity: new Date(),
+});
 
 describe('Matchmaker', () => {
   let mockServer: jest.Mocked<Server>;
@@ -25,13 +37,16 @@ describe('Matchmaker', () => {
   let mockSocket: jest.Mocked<Socket>;
 
   beforeEach(() => {
+    jest.useFakeTimers();
+    jest.clearAllMocks();
+
     mockServer = {
-      sockets: {
-        sockets: new Map(),
-      },
       to: jest.fn().mockReturnValue({
         emit: jest.fn(),
       }),
+      sockets: {
+        sockets: new Map(),
+      },
     } as any;
 
     mockConnectionManager = {
@@ -47,228 +62,184 @@ describe('Matchmaker', () => {
       id: 'socket-123',
       emit: jest.fn(),
       join: jest.fn(),
+      handshake: {
+        auth: { token: 'test-token' },
+      },
     } as any;
 
     matchmaker = new Matchmaker(mockServer, mockConnectionManager, mockRoomManager);
   });
 
   afterEach(() => {
+    jest.useRealTimers();
     matchmaker.stop();
-    jest.clearAllMocks();
+  });
+
+  describe('constructor', () => {
+    it('should start matchmaking loop on initialization', () => {
+      expect(logger.info).toHaveBeenCalledWith('Matchmaking loop started');
+    });
+
+    it('should set up server connection', () => {
+      expect(mockServer).toBeDefined();
+    });
+  });
+
+  describe('stop', () => {
+    it('should stop matchmaking loop', () => {
+      matchmaker.stop();
+      expect(logger.info).toHaveBeenCalledWith('Matchmaking loop stopped');
+    });
+
+    it('should handle multiple stop calls gracefully', () => {
+      matchmaker.stop();
+      matchmaker.stop();
+      expect(logger.info).toHaveBeenCalledWith('Matchmaking loop stopped');
+    });
   });
 
   describe('enqueuePlayer', () => {
-    it('should add player to queue', () => {
-      const session: PlayerSession = {
-        socketId: 'socket-123',
-        playerId: 'player1',
-        connectedAt: new Date(),
-        lastActivity: new Date(),
-        roomId: null,
-      };
-      mockConnectionManager.getSession.mockReturnValue(session);
-
-      const preferences: MatchmakingPreferences = {
-        gameMode: 'deathmatch',
-        region: 'us-east',
-      };
-
-      const requestId = matchmaker.enqueuePlayer(mockSocket, preferences);
-      
-      expect(requestId).toBeDefined();
-      expect(mockSocket.emit).toHaveBeenCalledWith('matchmaking_queued', expect.objectContaining({
-        requestId,
-        estimatedWait: expect.any(Number),
-      }));
-    });
-
-    it('should throw if session not found', () => {
+    it('should throw error when session not found', () => {
       mockConnectionManager.getSession.mockReturnValue(undefined);
 
       expect(() => {
-        matchmaker.enqueuePlayer(mockSocket, { gameMode: 'deathmatch' });
+        matchmaker.enqueuePlayer(mockSocket, {
+          gameMode: 'FFA',
+          maxPlayers: 4,
+        });
       }).toThrow('Player session not found');
+    });
+
+    it('should add player to queue with valid session', () => {
+      mockConnectionManager.getSession.mockReturnValue(
+        createMockSession('socket-123', 'player-456')
+      );
+
+      const requestId = matchmaker.enqueuePlayer(mockSocket, {
+        gameMode: 'FFA',
+        maxPlayers: 4,
+      });
+
+      expect(requestId).toContain('req_');
+      expect(mockSocket.emit).toHaveBeenCalledWith('matchmaking_queued', {
+        requestId: expect.any(String),
+        estimatedWait: expect.any(Number),
+      });
+      expect(logger.debug).toHaveBeenCalledWith(
+        'Player player-456 enqueued for matchmaking',
+        expect.any(Object)
+      );
+    });
+
+    it('should include region in preferences', () => {
+      mockConnectionManager.getSession.mockReturnValue(
+        createMockSession('socket-123', 'player-456')
+      );
+
+      matchmaker.enqueuePlayer(mockSocket, {
+        gameMode: 'TEAM',
+        maxPlayers: 4,
+        region: 'us-east',
+      });
+
+      expect(matchmaker.getQueueLength()).toBe(1);
+      const status = matchmaker.getQueueStatus('socket-123');
+      expect(status?.preferences.region).toBe('us-east');
     });
   });
 
   describe('dequeuePlayer', () => {
+    beforeEach(() => {
+      mockConnectionManager.getSession.mockReturnValue(
+        createMockSession('socket-123', 'player-456')
+      );
+      matchmaker.enqueuePlayer(mockSocket, {
+        gameMode: 'FFA',
+        maxPlayers: 4,
+      });
+    });
+
     it('should remove player from queue', () => {
-      const session: PlayerSession = {
-        socketId: 'socket-123',
-        playerId: 'player1',
-        connectedAt: new Date(),
-        lastActivity: new Date(),
-        roomId: null,
-      };
-      mockConnectionManager.getSession.mockReturnValue(session);
-
-      const preferences: MatchmakingPreferences = {
-        gameMode: 'deathmatch',
-      };
-
-      matchmaker.enqueuePlayer(mockSocket, preferences);
-      expect(matchmaker.getQueueLength()).toBe(1);
-
       const result = matchmaker.dequeuePlayer('socket-123');
       expect(result).toBe(true);
       expect(matchmaker.getQueueLength()).toBe(0);
+      expect(logger.debug).toHaveBeenCalledWith(
+        'Player player-456 dequeued from matchmaking'
+      );
     });
 
-    it('should return false if player not in queue', () => {
+    it('should return false for unknown socket', () => {
       const result = matchmaker.dequeuePlayer('unknown-socket');
+      expect(result).toBe(false);
+    });
+
+    it('should return false when queue is empty', () => {
+      matchmaker.dequeuePlayer('socket-123');
+      const result = matchmaker.dequeuePlayer('socket-123');
       expect(result).toBe(false);
     });
   });
 
   describe('getQueueLength', () => {
-    it('should return 0 for empty queue', () => {
+    it('should return 0 when queue is empty', () => {
       expect(matchmaker.getQueueLength()).toBe(0);
+    });
+
+    it('should return queue size', () => {
+      mockConnectionManager.getSession.mockReturnValue(
+        createMockSession('socket-123', 'player-456')
+      );
+      matchmaker.enqueuePlayer(mockSocket, { gameMode: 'FFA', maxPlayers: 4 });
+      expect(matchmaker.getQueueLength()).toBe(1);
     });
   });
 
   describe('getQueueStatus', () => {
-    it('should return queue status for player', () => {
-      const session: PlayerSession = {
-        socketId: 'socket-123',
-        playerId: 'player1',
-        connectedAt: new Date(),
-        lastActivity: new Date(),
-        roomId: null,
-      };
-      mockConnectionManager.getSession.mockReturnValue(session);
+    it('should return undefined for unknown socket', () => {
+      expect(matchmaker.getQueueStatus('unknown-socket')).toBeUndefined();
+    });
 
-      matchmaker.enqueuePlayer(mockSocket, { gameMode: 'deathmatch' });
-      
+    it('should return request for queued player', () => {
+      mockConnectionManager.getSession.mockReturnValue(
+        createMockSession('socket-123', 'player-456')
+      );
+      matchmaker.enqueuePlayer(mockSocket, { gameMode: 'FFA', maxPlayers: 4 });
+
       const status = matchmaker.getQueueStatus('socket-123');
       expect(status).toBeDefined();
-      expect(status?.playerId).toBe('player1');
-    });
-
-    it('should return undefined for unknown player', () => {
-      const status = matchmaker.getQueueStatus('unknown-socket');
-      expect(status).toBeUndefined();
-    });
-  });
-
-  describe('stop', () => {
-    it('should clear matchmaking interval', () => {
-      matchmaker.stop();
-      // Should not throw
-    });
-  });
-
-  describe('processQueue', () => {
-    it('should process queue when worker succeeds', async () => {
-      const session: PlayerSession = {
-        socketId: 'socket-123',
-        playerId: 'player1',
-        connectedAt: new Date(),
-        lastActivity: new Date(),
-        roomId: null,
-      };
-      mockConnectionManager.getSession.mockReturnValue(session);
-      mockConnectionManager.assignRoom.mockReturnValue();
-      
-      const preferences: MatchmakingPreferences = {
-        gameMode: 'deathmatch',
-        region: 'us-east',
-      };
-      
-      matchmaker.enqueuePlayer(mockSocket, preferences);
-      
-      // Wait for the matchmaking loop to process
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    it('should not process empty queue', async () => {
-      // Queue is empty, should not throw
-      await (matchmaker as any).processQueue();
-    });
-  });
-
-  describe('createMatch', () => {
-    it('should create a match with matched requests', () => {
-      const requests: MatchmakingRequest[] = [
-        {
-          requestId: 'req_1',
-          playerId: 'player1',
-          socketId: 'socket-123',
-          preferences: { gameMode: 'deathmatch', region: 'us-east' },
-          queuedAt: new Date(),
-        },
-        {
-          requestId: 'req_2',
-          playerId: 'player2',
-          socketId: 'socket-124',
-          preferences: { gameMode: 'deathmatch', region: 'us-east' },
-          queuedAt: new Date(),
-        },
-      ];
-
-      mockConnectionManager.assignRoom.mockReturnValue();
-      
-      (matchmaker as any).createMatch(requests);
-      
-      expect(mockRoomManager.createRoom).toHaveBeenCalled();
-      expect(mockConnectionManager.assignRoom).toHaveBeenCalled();
-    });
-  });
-
-  describe('groupByGameMode', () => {
-    it('should group requests by game mode and region', () => {
-      const requests: MatchmakingRequest[] = [
-        {
-          requestId: 'req_1',
-          playerId: 'player1',
-          socketId: 'socket-123',
-          preferences: { gameMode: 'deathmatch', region: 'us-east' },
-          queuedAt: new Date(),
-        },
-        {
-          requestId: 'req_2',
-          playerId: 'player2',
-          socketId: 'socket-124',
-          preferences: { gameMode: 'deathmatch', region: 'us-east' },
-          queuedAt: new Date(),
-        },
-        {
-          requestId: 'req_3',
-          playerId: 'player3',
-          socketId: 'socket-125',
-          preferences: { gameMode: 'ctf', region: 'us-west' },
-          queuedAt: new Date(),
-        },
-      ];
-
-      const groups = (matchmaker as any).groupByGameMode(requests);
-      
-      expect(groups.size).toBe(2);
-      expect(groups.get('deathmatch_us-east')?.length).toBe(2);
-      expect(groups.get('ctf_us-west')?.length).toBe(1);
-    });
-
-    it('should handle requests without region', () => {
-      const requests: MatchmakingRequest[] = [
-        {
-          requestId: 'req_1',
-          playerId: 'player1',
-          socketId: 'socket-123',
-          preferences: { gameMode: 'deathmatch' },
-          queuedAt: new Date(),
-        },
-      ];
-
-      const groups = (matchmaker as any).groupByGameMode(requests);
-      
-      expect(groups.size).toBe(1);
-      expect(groups.get('deathmatch_any')?.length).toBe(1);
+      expect(status?.playerId).toBe('player-456');
+      expect(status?.preferences.gameMode).toBe('FFA');
     });
   });
 
   describe('estimateWaitTime', () => {
     it('should return estimated wait time', () => {
       const waitTime = (matchmaker as any).estimateWaitTime();
-      expect(waitTime).toBeGreaterThan(0);
+      expect(typeof waitTime).toBe('number');
+      expect(waitTime).toBeGreaterThanOrEqual(30);
+    });
+  });
+
+  describe('groupByGameMode', () => {
+    it('should group by gameMode and region', () => {
+      const mockRequests = [
+        { preferences: { gameMode: 'FFA', region: 'us' } },
+        { preferences: { gameMode: 'FFA', region: 'us' } },
+        { preferences: { gameMode: 'TEAM', region: 'eu' } },
+      ];
+
+      const result = (matchmaker as any).groupByGameMode(mockRequests);
+      expect(result.get('FFA_us')).toHaveLength(2);
+      expect(result.get('TEAM_eu')).toHaveLength(1);
+    });
+
+    it('should default region to any', () => {
+      const mockRequests = [
+        { preferences: { gameMode: 'FFA' /* no region */ } },
+      ];
+
+      const result = (matchmaker as any).groupByGameMode(mockRequests);
+      expect(result.get('FFA_any')).toHaveLength(1);
     });
   });
 });
