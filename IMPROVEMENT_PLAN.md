@@ -8,7 +8,7 @@
 
 ## Latest Improvements (2026-02-18)
 1. ✅ Fixed BaseRepository test expectation for error message format
-2. ✅ 1009 tests passing (624 client + 385 server), 0 lint warnings ✅
+2. ✅ 1012 tests passing (624 client + 388 server), 0 lint warnings ✅
 3. ✅ Added CacheService cleanup interval tests
 4. ✅ Added LeaderboardService JSON parse error tests
 5. ✅ Added InventoryService transferItem rejection test
@@ -22,6 +22,8 @@
 13. ✅ Updated CHANGELOG.md
 14. ✅ Pinned ESLint to 8.57.0
 15. ✅ CI uses --audit-level=high (ignores moderate vulnerabilities in dev deps)
+16. ✅ Added comprehensive ProgressionService tests (+2 tests)
+17. ✅ Added InventoryService transferItem default quantity test (+1 test)
 
 ## Completed Tasks
 1. ✅ Fixed UnlockableRepository exports

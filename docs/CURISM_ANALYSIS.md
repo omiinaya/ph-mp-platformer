@@ -50,14 +50,18 @@
 
 ## Recent Improvements (2026-02-18)
 
-1. ✅ Added GameSync edge case tests (+4 tests)
-2. ✅ Test count: 907 total (357 server + 550 client, 1 skipped)
-3. ✅ Server coverage: ~80% statements
-4. ✅ EventHandler coverage: 96.51%
-5. ✅ RoomManager coverage: 92.5%
-6. ✅ authMiddleware coverage: 100%
-7. ✅ 0 lint warnings maintained
-8. ✅ All tests passing
+1. ✅ Added comprehensive ProgressionService tests (+2 tests)
+   - Test for all stat updates (deaths, playTimeSeconds, gamesPlayed, gamesWon)
+   - Test for highestScore not updating when score is lower
+2. ✅ Added InventoryService transferItem default quantity test (+1 test)
+3. ✅ Test count: 1012 total (388 server + 624 client, 1 skipped)
+4. ✅ Server coverage: ~80% statements
+5. ✅ EventHandler coverage: 96.51%
+6. ✅ RoomManager coverage: 92.5%
+7. ✅ authMiddleware coverage: 100%
+8. ✅ ProgressionService coverage: 100%
+9. ✅ 0 lint warnings maintained
+10. ✅ All tests passing
 
 ---
 
@@ -113,10 +117,10 @@
 
 | Type | Count | Status |
 |------|-------|--------|
-| Server Unit | 380 | ✅ All pass |
-| Client Unit | 550 | ✅ All pass |
+| Server Unit | 388 | ✅ All pass |
+| Client Unit | 624 | ✅ All pass |
 | Skipped | 1 | ℹ️ Intentional |
-| **Total** | **930** | **✅ 100% pass** |
+| **Total** | **1012** | **✅ 100% pass** |
 
 ---
 
