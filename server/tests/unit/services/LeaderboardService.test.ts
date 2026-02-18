@@ -124,6 +124,22 @@ describe('LeaderboardService', () => {
       expect(mockRedisClient.setEx).toHaveBeenCalled();
     });
 
+    it('should refetch from database when cache data is corrupted', async () => {
+      // Return invalid JSON to trigger parse error
+      mockRedisClient.get.mockResolvedValue('invalid-json{');
+      
+      mockStatsRepo.findTopPlayersByScore.mockResolvedValue([
+        { playerId: 'player1', score: 1000, kills: 10, deaths: 2, playTimeSeconds: 3600 },
+      ]);
+
+      mockProfileRepo.findOne.mockResolvedValue({ id: 'player1', username: 'Player1' });
+
+      const result = await leaderboardService.getTopPlayersByScore(10, true);
+
+      expect(result).toHaveLength(1);
+      expect(mockStatsRepo.findTopPlayersByScore).toHaveBeenCalled();
+    });
+
     it('should bypass cache when useCache is false', async () => {
       mockStatsRepo.findTopPlayersByScore.mockResolvedValue([
         { playerId: 'player1', score: 1000, kills: 10, deaths: 2, playTimeSeconds: 3600 },
@@ -165,6 +181,19 @@ describe('LeaderboardService', () => {
       expect(result).toHaveLength(2);
       expect(result[0].username).toBe('Player1');
       expect(mockRedisClient.setEx).toHaveBeenCalled();
+    });
+
+    it('should refetch from database when cached level data is corrupted', async () => {
+      mockRedisClient.get.mockResolvedValue('invalid-json{');
+      
+      mockProfileRepo.findTopPlayersByLevel.mockResolvedValue([
+        { id: 'player1', username: 'Player1', level: 50, experience: 1000, coins: 500 },
+      ]);
+
+      const result = await leaderboardService.getTopPlayersByLevel(10);
+
+      expect(result).toHaveLength(1);
+      expect(mockProfileRepo.findTopPlayersByLevel).toHaveBeenCalled();
     });
   });
 
