@@ -49,7 +49,12 @@ export class LeaderboardService {
     if (useCache) {
       const cached = await this.redisClient.get(cacheKey);
       if (cached) {
-        return JSON.parse(cached);
+        try {
+          return JSON.parse(cached);
+        } catch (error) {
+          logger.warn('Failed to parse cached leaderboard data, refetching from DB');
+          // Continue to fetch from database
+        }
       }
     }
 
@@ -84,7 +89,12 @@ export class LeaderboardService {
     const cacheKey = `leaderboard:top_level:${limit}`;
     const cached = await this.redisClient.get(cacheKey);
     if (cached) {
-      return JSON.parse(cached);
+      try {
+        return JSON.parse(cached);
+      } catch (error) {
+        logger.warn('Failed to parse cached leaderboard data, refetching from DB');
+        // Continue to fetch from database
+      }
     }
 
     const profiles = await this.profileRepo.findTopPlayersByLevel(limit);
