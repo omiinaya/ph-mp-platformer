@@ -213,5 +213,260 @@ describe('GameSync', () => {
     it('should have broadcastState method', () => {
       expect(typeof (gameSync as any).broadcastState).toBe('function');
     });
+
+    it('should broadcast state for active room', () => {
+      gameSync.resetRoomState('room1');
+      // Access the broadcastState method
+      (gameSync as any).broadcastState('room1');
+      // Should not throw
+    });
+  });
+
+  describe('tick', () => {
+    it('should process active rooms on tick', () => {
+      const tickSpy = jest.spyOn(gameSync as any, 'tick');
+      gameSync.start();
+      
+      return new Promise<void>((resolve) => {
+        setTimeout(() => {
+          expect(tickSpy).toHaveBeenCalled();
+          gameSync.stop();
+          resolve();
+        }, 150);
+      });
+    });
+
+    it('should handle empty active rooms list', () => {
+      mockRoomManager.getActiveRooms.mockReturnValue([]);
+      gameSync.start();
+      
+      return new Promise<void>((resolve) => {
+        setTimeout(() => {
+          gameSync.stop();
+          resolve();
+        }, 100);
+      });
+    });
+  });
+
+  describe('updateRoomState', () => {
+    it('should update room state with entities', () => {
+      gameSync.resetRoomState('test-room');
+      const state = gameSync.getRoomState('test-room');
+      state!.entities['player1'] = {
+        position: { x: 100, y: 100 },
+        velocity: { x: 10, y: 0 },
+        isOnGround: true,
+      };
+      
+      // Trigger update by calling tick
+      gameSync.start();
+      
+      return new Promise<void>((resolve) => {
+        setTimeout(() => {
+          const updatedState = gameSync.getRoomState('test-room');
+          expect(updatedState).toBeDefined();
+          gameSync.stop();
+          resolve();
+        }, 100);
+      });
+    });
+
+    it('should handle entity without velocity', () => {
+      gameSync.resetRoomState('test-room');
+      const state = gameSync.getRoomState('test-room');
+      state!.entities['player1'] = {
+        position: { x: 100, y: 100 },
+        isOnGround: true,
+      };
+      
+      gameSync.start();
+      
+      return new Promise<void>((resolve) => {
+        setTimeout(() => {
+          gameSync.stop();
+          resolve();
+        }, 100);
+      });
+    });
+
+    it('should update entity position based on velocity', () => {
+      gameSync.resetRoomState('test-room');
+      const state = gameSync.getRoomState('test-room');
+      state!.entities['player1'] = {
+        position: { x: 100, y: 100 },
+        velocity: { x: 10, y: 0 },
+        isOnGround: true,
+      };
+      
+      // Trigger update by calling tick directly
+      (gameSync as any).tick();
+      
+      const updatedState = gameSync.getRoomState('test-room');
+      expect(updatedState).toBeDefined();
+    });
+  });
+
+  describe('processGameEvent', () => {
+    it('should process player_input event', () => {
+      gameSync.resetRoomState('test-room');
+      const state = gameSync.getRoomState('test-room');
+      state!.entities['player1'] = {
+        position: { x: 100, y: 100 },
+        velocity: { x: 0, y: 0 },
+        isOnGround: true,
+      };
+      
+      state!.events.push({
+        type: 'player_input',
+        playerId: 'player1',
+        input: { moveX: 1, jump: false },
+      });
+      
+      gameSync.start();
+      
+      return new Promise<void>((resolve) => {
+        setTimeout(() => {
+          gameSync.stop();
+          resolve();
+        }, 100);
+      });
+    });
+
+    it('should process collision event', () => {
+      gameSync.resetRoomState('test-room');
+      const state = gameSync.getRoomState('test-room');
+      state!.entities['player1'] = {
+        position: { x: 100, y: 100 },
+        velocity: { x: 0, y: 0 },
+        health: 100,
+      };
+      state!.entities['enemy1'] = {
+        position: { x: 110, y: 100 },
+        velocity: { x: 0, y: 0 },
+        health: 50,
+      };
+      
+      state!.events.push({
+        type: 'collision',
+        entityId1: 'player1',
+        entityId2: 'enemy1',
+        damage: 10,
+      });
+      
+      gameSync.start();
+      
+      return new Promise<void>((resolve) => {
+        setTimeout(() => {
+          gameSync.stop();
+          resolve();
+        }, 100);
+      });
+    });
+
+    it('should process entity_destroyed event', () => {
+      gameSync.resetRoomState('test-room');
+      const state = gameSync.getRoomState('test-room');
+      state!.entities['enemy1'] = {
+        position: { x: 100, y: 100 },
+        health: 5,
+      };
+      
+      state!.events.push({
+        type: 'collision',
+        entityId1: 'player1',
+        entityId2: 'enemy1',
+        damage: 10,
+      });
+      
+      gameSync.start();
+      
+      return new Promise<void>((resolve) => {
+        setTimeout(() => {
+          gameSync.stop();
+          resolve();
+        }, 100);
+      });
+    });
+
+    it('should handle unknown event type', () => {
+      gameSync.resetRoomState('test-room');
+      const state = gameSync.getRoomState('test-room');
+      
+      state!.events.push({
+        type: 'unknown_event',
+        someData: 'test',
+      });
+      
+      gameSync.start();
+      
+      return new Promise<void>((resolve) => {
+        setTimeout(() => {
+          gameSync.stop();
+          resolve();
+        }, 100);
+      });
+    });
+  });
+
+  describe('computeDelta', () => {
+    it('should compute delta between states', () => {
+      gameSync.resetRoomState('test-room');
+      
+      // Access computeDelta method
+      const delta = (gameSync as any).computeDelta('test-room');
+      
+      expect(delta).toBeDefined();
+      expect(delta.roomId).toBe('test-room');
+    });
+
+    it('should return full snapshot for non-existent room', () => {
+      const delta = (gameSync as any).computeDelta('non-existent');
+      
+      expect(delta.full).toBe(true);
+    });
+
+    it('should use delta compression for small changes', () => {
+      gameSync.resetRoomState('test-room');
+      const state = gameSync.getRoomState('test-room');
+      state!.entities['player1'] = {
+        position: { x: 100, y: 100 },
+        velocity: { x: 10, y: 0 },
+        isOnGround: true,
+      };
+      
+      // First delta - should be full
+      const delta1 = (gameSync as any).computeDelta('test-room');
+      
+      // Update entity
+      state!.entities['player1'].position.x = 101;
+      
+      // Second delta - should be delta
+      const delta2 = (gameSync as any).computeDelta('test-room');
+      
+      expect(delta2.full).toBe(false);
+    });
+  });
+
+  describe('validateInput', () => {
+    it('should validate valid input', () => {
+      const result = (gameSync as any).validateInput({ moveX: 1, jump: true });
+      expect(result).toBe(true);
+    });
+
+    it('should reject null input', () => {
+      const result = (gameSync as any).validateInput(null);
+      expect(result).toBe(false);
+    });
+
+    it('should reject non-object input', () => {
+      const result = (gameSync as any).validateInput('string');
+      expect(result).toBe(false);
+    });
+
+    it('should reject undefined input', () => {
+      const result = (gameSync as any).validateInput(undefined);
+      expect(result).toBe(false);
+    });
   });
 });

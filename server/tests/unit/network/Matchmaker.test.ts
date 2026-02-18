@@ -156,4 +156,119 @@ describe('Matchmaker', () => {
       // Should not throw
     });
   });
+
+  describe('processQueue', () => {
+    it('should process queue when worker succeeds', async () => {
+      const session: PlayerSession = {
+        socketId: 'socket-123',
+        playerId: 'player1',
+        connectedAt: new Date(),
+        lastActivity: new Date(),
+        roomId: null,
+      };
+      mockConnectionManager.getSession.mockReturnValue(session);
+      mockConnectionManager.assignRoom.mockReturnValue();
+      
+      const preferences: MatchmakingPreferences = {
+        gameMode: 'deathmatch',
+        region: 'us-east',
+      };
+      
+      matchmaker.enqueuePlayer(mockSocket, preferences);
+      
+      // Wait for the matchmaking loop to process
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
+
+    it('should not process empty queue', async () => {
+      // Queue is empty, should not throw
+      await (matchmaker as any).processQueue();
+    });
+  });
+
+  describe('createMatch', () => {
+    it('should create a match with matched requests', () => {
+      const requests: MatchmakingRequest[] = [
+        {
+          requestId: 'req_1',
+          playerId: 'player1',
+          socketId: 'socket-123',
+          preferences: { gameMode: 'deathmatch', region: 'us-east' },
+          queuedAt: new Date(),
+        },
+        {
+          requestId: 'req_2',
+          playerId: 'player2',
+          socketId: 'socket-124',
+          preferences: { gameMode: 'deathmatch', region: 'us-east' },
+          queuedAt: new Date(),
+        },
+      ];
+
+      mockConnectionManager.assignRoom.mockReturnValue();
+      
+      (matchmaker as any).createMatch(requests);
+      
+      expect(mockRoomManager.createRoom).toHaveBeenCalled();
+      expect(mockConnectionManager.assignRoom).toHaveBeenCalled();
+    });
+  });
+
+  describe('groupByGameMode', () => {
+    it('should group requests by game mode and region', () => {
+      const requests: MatchmakingRequest[] = [
+        {
+          requestId: 'req_1',
+          playerId: 'player1',
+          socketId: 'socket-123',
+          preferences: { gameMode: 'deathmatch', region: 'us-east' },
+          queuedAt: new Date(),
+        },
+        {
+          requestId: 'req_2',
+          playerId: 'player2',
+          socketId: 'socket-124',
+          preferences: { gameMode: 'deathmatch', region: 'us-east' },
+          queuedAt: new Date(),
+        },
+        {
+          requestId: 'req_3',
+          playerId: 'player3',
+          socketId: 'socket-125',
+          preferences: { gameMode: 'ctf', region: 'us-west' },
+          queuedAt: new Date(),
+        },
+      ];
+
+      const groups = (matchmaker as any).groupByGameMode(requests);
+      
+      expect(groups.size).toBe(2);
+      expect(groups.get('deathmatch_us-east')?.length).toBe(2);
+      expect(groups.get('ctf_us-west')?.length).toBe(1);
+    });
+
+    it('should handle requests without region', () => {
+      const requests: MatchmakingRequest[] = [
+        {
+          requestId: 'req_1',
+          playerId: 'player1',
+          socketId: 'socket-123',
+          preferences: { gameMode: 'deathmatch' },
+          queuedAt: new Date(),
+        },
+      ];
+
+      const groups = (matchmaker as any).groupByGameMode(requests);
+      
+      expect(groups.size).toBe(1);
+      expect(groups.get('deathmatch_any')?.length).toBe(1);
+    });
+  });
+
+  describe('estimateWaitTime', () => {
+    it('should return estimated wait time', () => {
+      const waitTime = (matchmaker as any).estimateWaitTime();
+      expect(waitTime).toBeGreaterThan(0);
+    });
+  });
 });
