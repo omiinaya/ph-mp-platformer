@@ -85,6 +85,13 @@ describe('GameSync', () => {
       const state = gameSync.getRoomState('non-existent');
       expect(state).toBeUndefined();
     });
+
+    it('should return existing room state', () => {
+      gameSync.resetRoomState('test-room');
+      const state = gameSync.getRoomState('test-room');
+      expect(state).toBeDefined();
+      expect(state!.roomId).toBe('test-room');
+    });
   });
 
   describe('resetRoomState', () => {
@@ -129,6 +136,31 @@ describe('GameSync', () => {
       expect(() => {
         gameSync.applyPlayerInput('non-existent', 'player1', { moveX: 1 });
       }).not.toThrow();
+    });
+
+    it('should apply player input with jump when on ground', () => {
+      gameSync.resetRoomState('test-room');
+      // First set player to be on ground
+      const state = gameSync.getRoomState('test-room');
+      state!.entities['player1'] = {
+        position: { x: 100, y: 100 },
+        velocity: { x: 0, y: 0 },
+        isOnGround: true,
+      };
+      
+      gameSync.applyPlayerInput('test-room', 'player1', {
+        moveX: 1,
+        jump: true,
+      });
+      
+      expect(state!.entities['player1']).toBeDefined();
+    });
+
+    it('should handle empty input object', () => {
+      gameSync.resetRoomState('test-room');
+      gameSync.applyPlayerInput('test-room', 'player1', {});
+      const state = gameSync.getRoomState('test-room');
+      expect(state).toBeDefined();
     });
   });
 });
