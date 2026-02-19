@@ -164,8 +164,9 @@ describe('InputManager', () => {
   describe('getGamepad', () => {
     it('should return gamepad plugin when enabled', () => {
       // Gamepad is disabled by default
-      const gamepad = inputManager.getGamepad();
+      const _gamepad = inputManager.getGamepad();
       // May be undefined since gamepad is disabled by default
+      expect(_gamepad).toBeUndefined();
     });
   });
 });

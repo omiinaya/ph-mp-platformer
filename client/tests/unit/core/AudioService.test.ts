@@ -3,7 +3,7 @@ import { AudioService } from '../../../src/core/AudioService';
 // Mock Phaser scene
 const createMockScene = () => {
   const mockSound = {
-    add: jest.fn().mockImplementation((key: string, config: any) => ({
+    add: jest.fn().mockImplementation((key: string, _config: any) => ({
       key,
       play: jest.fn(),
       stop: jest.fn(),

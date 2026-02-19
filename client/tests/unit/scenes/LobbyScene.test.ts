@@ -1,5 +1,4 @@
-import { LobbyScene, LobbySceneData } from '../../../src/scenes/LobbyScene';
-import { InputManager } from '../../../src/core/InputManager';
+import { LobbyScene } from '../../../src/scenes/LobbyScene';
 import { NetworkService } from '../../../src/services/NetworkService';
 import { logger } from '../../../src/utils/logger';
 

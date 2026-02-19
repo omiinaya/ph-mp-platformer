@@ -119,7 +119,8 @@ describe('ObjectPool', () => {
       const obj1 = pool.acquire();
       expect(pool.getActiveCount()).toBe(1);
       
-      const obj2 = pool.acquire();
+      const _obj2 = pool.acquire();
+      expect(_obj2).toBeDefined();
       expect(pool.getActiveCount()).toBe(2);
       
       pool.release(obj1);

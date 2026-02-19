@@ -1,7 +1,7 @@
-import { SaveManager } from "../../../src/core/SaveManager";
-import { SaveData } from "../../../src/core/SaveManager";
+import { SaveManager } from '../../../src/core/SaveManager';
+import { SaveData } from '../../../src/core/SaveManager';
 
-describe("SaveManager", () => {
+describe('SaveManager', () => {
   let saveManager: SaveManager;
   let mockScene: any;
 
@@ -25,43 +25,43 @@ describe("SaveManager", () => {
     localStorage.clear();
   });
 
-  describe("constructor", () => {
-    it("should initialize with default auto-save settings", () => {
+  describe('constructor', () => {
+    it('should initialize with default auto-save settings', () => {
       expect(saveManager.isAutoSaveEnabled()).toBe(false);
     });
 
-    it("should initialize with auto-save disabled when false", () => {
+    it('should initialize with auto-save disabled when false', () => {
       const manager = new SaveManager(mockScene, false);
       expect(manager.isAutoSaveEnabled()).toBe(false);
     });
 
-    it("should initialize with auto-save enabled when true", () => {
+    it('should initialize with auto-save enabled when true', () => {
       const manager = new SaveManager(mockScene, true);
       expect(manager.isAutoSaveEnabled()).toBe(true);
     });
 
-    it("should use default auto-save interval if not provided", () => {
+    it('should use default auto-save interval if not provided', () => {
       const manager = new SaveManager(mockScene, true);
-      expect(manager["autoSaveInterval"]).toBe(60000);
+      expect(manager['autoSaveInterval']).toBe(60000);
     });
 
-    it("should use custom auto-save interval when provided", () => {
+    it('should use custom auto-save interval when provided', () => {
       const manager = new SaveManager(mockScene, true, 5000);
-      expect(manager["autoSaveInterval"]).toBe(5000);
+      expect(manager['autoSaveInterval']).toBe(5000);
     });
   });
 
-  describe("hasSave", () => {
-    it("should return false for invalid slot indices", () => {
+  describe('hasSave', () => {
+    it('should return false for invalid slot indices', () => {
       expect(saveManager.hasSave(-1)).toBe(false);
       expect(saveManager.hasSave(5)).toBe(false);
     });
 
-    it("should return false for non-existent save", () => {
+    it('should return false for non-existent save', () => {
       expect(saveManager.hasSave(0)).toBe(false);
     });
 
-    it("should return true after saving", () => {
+    it('should return true after saving', () => {
       const saveData: Partial<SaveData> = {
         player: {
           health: 10,
@@ -78,12 +78,12 @@ describe("SaveManager", () => {
     });
   });
 
-  describe("hasAutoSave", () => {
-    it("should return false when no auto-save exists", () => {
+  describe('hasAutoSave', () => {
+    it('should return false when no auto-save exists', () => {
       expect(saveManager.hasAutoSave()).toBe(false);
     });
 
-    it("should return true after auto-saving", () => {
+    it('should return true after auto-saving', () => {
       const saveData: Partial<SaveData> = {
         player: {
           health: 10,
@@ -100,8 +100,8 @@ describe("SaveManager", () => {
     });
   });
 
-  describe("saveGame", () => {
-    it("should return false for invalid slot indices", () => {
+  describe('saveGame', () => {
+    it('should return false for invalid slot indices', () => {
       const saveData: Partial<SaveData> = {
         player: {
           health: 10,
@@ -117,7 +117,7 @@ describe("SaveManager", () => {
       expect(saveManager.saveGame(5, saveData)).toBe(false);
     });
 
-    it("should save data and return true", () => {
+    it('should save data and return true', () => {
       const saveData: Partial<SaveData> = {
         player: {
           health: 10,
@@ -133,7 +133,7 @@ describe("SaveManager", () => {
       expect(saveManager.hasSave(0)).toBe(true);
     });
 
-    it("should merge save data with existing data", () => {
+    it('should merge save data with existing data', () => {
       const initialData: Partial<SaveData> = {
         player: {
           health: 10,
@@ -167,7 +167,7 @@ describe("SaveManager", () => {
       expect(loaded?.player.totalScore).toBe(100);
     });
 
-    it("should update timestamp on save", () => {
+    it('should update timestamp on save', () => {
       const beforeTime = Date.now();
       const saveData: Partial<SaveData> = {
         player: {
@@ -188,8 +188,8 @@ describe("SaveManager", () => {
     });
   });
 
-  describe("saveAutoGame", () => {
-    it("should save auto-save data", () => {
+  describe('saveAutoGame', () => {
+    it('should save auto-save data', () => {
       const saveData: Partial<SaveData> = {
         player: {
           health: 10,
@@ -205,7 +205,7 @@ describe("SaveManager", () => {
       expect(saveManager.hasAutoSave()).toBe(true);
     });
 
-    it("should update timestamp", () => {
+    it('should update timestamp', () => {
       const beforeTime = Date.now();
       const saveData: Partial<SaveData> = {
         player: {
@@ -225,17 +225,17 @@ describe("SaveManager", () => {
     });
   });
 
-  describe("loadGame", () => {
-    it("should return undefined for invalid slot index", () => {
+  describe('loadGame', () => {
+    it('should return undefined for invalid slot index', () => {
       expect(saveManager.loadGame(-1)).toBeUndefined();
       expect(saveManager.loadGame(5)).toBeUndefined();
     });
 
-    it("should return undefined when save not found", () => {
+    it('should return undefined when save not found', () => {
       expect(saveManager.loadGame(0)).toBeUndefined();
     });
 
-    it("should load saved game data", () => {
+    it('should load saved game data', () => {
       const saveData: Partial<SaveData> = {
         player: {
           health: 15,
@@ -265,12 +265,12 @@ describe("SaveManager", () => {
     });
   });
 
-  describe("loadAutoGame", () => {
-    it("should return undefined when no auto-save exists", () => {
+  describe('loadAutoGame', () => {
+    it('should return undefined when no auto-save exists', () => {
       expect(saveManager.loadAutoGame()).toBeUndefined();
     });
 
-    it("should load auto-save data", () => {
+    it('should load auto-save data', () => {
       const saveData: Partial<SaveData> = {
         player: {
           health: 20,
@@ -292,13 +292,13 @@ describe("SaveManager", () => {
     });
   });
 
-  describe("deleteSave", () => {
-    it("should return false for invalid slot index", () => {
+  describe('deleteSave', () => {
+    it('should return false for invalid slot index', () => {
       expect(saveManager.deleteSave(-1)).toBe(false);
       expect(saveManager.deleteSave(5)).toBe(false);
     });
 
-    it("should delete save and return true", () => {
+    it('should delete save and return true', () => {
       const saveData: Partial<SaveData> = {
         player: {
           health: 10,
@@ -317,20 +317,20 @@ describe("SaveManager", () => {
       expect(saveManager.hasSave(0)).toBe(false);
     });
 
-    it("should return true when deleting non-existent save", () => {
+    it('should return true when deleting non-existent save', () => {
       expect(saveManager.deleteSave(0)).toBe(true);
       expect(saveManager.hasSave(0)).toBe(false);
     });
   });
 
-  describe("getSaveSlots", () => {
-    it("should return array of 5 slots all empty initially", () => {
+  describe('getSaveSlots', () => {
+    it('should return array of 5 slots all empty initially', () => {
       const slots = saveManager.getSaveSlots();
       expect(slots.length).toBe(5);
       expect(slots.every((slot) => !slot.exists)).toBe(true);
     });
 
-    it("should return slot info after saving", () => {
+    it('should return slot info after saving', () => {
       const saveData = {
         player: {
           health: 10,
@@ -353,7 +353,7 @@ describe("SaveManager", () => {
       expect(slots[4]?.exists).toBe(false);
     });
 
-    it("should include save data in slot info", () => {
+    it('should include save data in slot info', () => {
       const saveData = {
         player: {
           health: 15,
@@ -375,12 +375,12 @@ describe("SaveManager", () => {
     });
   });
 
-  describe("getAutoSaveInfo", () => {
-    it("should return null when no auto-save exists", () => {
+  describe('getAutoSaveInfo', () => {
+    it('should return null when no auto-save exists', () => {
       expect(saveManager.getAutoSaveInfo()).toBeNull();
     });
 
-    it("should return auto-save info when exists", () => {
+    it('should return auto-save info when exists', () => {
       const saveData = {
         player: {
           health: 10,
@@ -404,8 +404,8 @@ describe("SaveManager", () => {
     });
   });
 
-  describe("clearAllSaves", () => {
-    it("should clear all save slots", () => {
+  describe('clearAllSaves', () => {
+    it('should clear all save slots', () => {
       const saveData1 = {
         player: {
           health: 10,
@@ -444,10 +444,10 @@ describe("SaveManager", () => {
     });
   });
 
-  describe("destroy", () => {
-    it("should clean up resources", () => {
+  describe('destroy', () => {
+    it('should clean up resources', () => {
       saveManager.destroy();
-      expect(saveManager["scene"]).toBeUndefined();
+      expect(saveManager['scene']).toBeUndefined();
     });
   });
 });

@@ -1,4 +1,4 @@
-import { Inventory, InventorySlot, DroppedItem } from '../../../src/entities/Inventory';
+import { Inventory } from '../../../src/entities/Inventory';
 import { Item } from '../../../src/entities/Item';
 
 // Mock Phaser

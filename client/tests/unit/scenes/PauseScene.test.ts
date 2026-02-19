@@ -4,7 +4,7 @@ import { SceneService } from '../../../src/core/SceneManager';
 import { eventBus } from '../../../src/core/EventBus';
 import { logger } from '../../../src/utils/logger';
 
-// Declare mocks
+// Declare mocks (using var to avoid TDZ with hoisted jest.mock)
 var mockSceneStart: jest.Mock;
 var mockSceneStop: jest.Mock;
 var mockAddRectangle: jest.Mock;

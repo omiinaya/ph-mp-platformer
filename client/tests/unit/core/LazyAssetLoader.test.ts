@@ -22,7 +22,7 @@ jest.mock('phaser', () => ({
   })),
 }));
 
-import { LazyAssetLoader, AssetType, AssetPriority } from '../../../src/core/LazyAssetLoader';
+import { LazyAssetLoader } from '../../../src/core/LazyAssetLoader';
 
 describe('LazyAssetLoader', () => {
   let mockScene: any;

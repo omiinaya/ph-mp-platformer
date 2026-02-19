@@ -1,9 +1,8 @@
 import { MainMenuScene } from '../../../src/scenes/MainMenuScene';
-import { InputManager, InputConfig } from '../../../src/core/InputManager';
+import { InputManager } from '../../../src/core/InputManager';
 import { SceneService } from '../../../src/core/SceneManager';
-import { logger } from '../../../src/utils/logger';
 
-// Declare mocks
+// Declare mocks (using var to avoid TDZ with hoisted jest.mock)
 var mockSceneStart: jest.Mock;
 var mockAddText: jest.Mock;
 

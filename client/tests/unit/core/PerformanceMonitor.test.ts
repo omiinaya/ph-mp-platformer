@@ -5,10 +5,9 @@ import {
   stopPerformanceMonitoring,
   getPerformanceReport,
   resetPerformanceData,
-  profileFunction,
-} from "../../../src/core/PerformanceMonitor";
+} from '../../../src/core/PerformanceMonitor';
 
-describe("PerformanceMonitor", () => {
+describe('PerformanceMonitor', () => {
   let monitor: PerformanceMonitor;
 
   beforeEach(() => {
@@ -21,50 +20,50 @@ describe("PerformanceMonitor", () => {
     PerformanceProfiler.resetProfiles();
   });
 
-  describe("Singleton Pattern", () => {
-    it("should return the same instance", () => {
+  describe('Singleton Pattern', () => {
+    it('should return the same instance', () => {
       const instance1 = PerformanceMonitor.getInstance();
       const instance2 = PerformanceMonitor.getInstance();
       expect(instance1).toBe(instance2);
     });
   });
 
-  describe("Enable/Disable", () => {
-    it("should enable monitoring", () => {
+  describe('Enable/Disable', () => {
+    it('should enable monitoring', () => {
       monitor.enable(30);
-      expect(monitor["enabled"]).toBe(true);
-      expect(monitor["thresholdFps"]).toBe(30);
+      expect(monitor['enabled']).toBe(true);
+      expect(monitor['thresholdFps']).toBe(30);
     });
 
-    it("should disable monitoring", () => {
+    it('should disable monitoring', () => {
       monitor.enable();
       monitor.disable();
-      expect(monitor["enabled"]).toBe(false);
+      expect(monitor['enabled']).toBe(false);
     });
 
-    it("should use default threshold when not specified", () => {
+    it('should use default threshold when not specified', () => {
       monitor.enable();
-      expect(monitor["thresholdFps"]).toBe(30);
+      expect(monitor['thresholdFps']).toBe(30);
     });
   });
 
-  describe("Frame Tracking", () => {
+  describe('Frame Tracking', () => {
     beforeEach(() => {
       monitor.enable();
     });
 
-    it("should track frame start", () => {
+    it('should track frame start', () => {
       monitor.startFrame();
-      expect(monitor["frameTimes"].length).toBe(1);
+      expect(monitor['frameTimes'].length).toBe(1);
     });
 
-    it("should not track when disabled", () => {
+    it('should not track when disabled', () => {
       monitor.disable();
       monitor.startFrame();
-      expect(monitor["frameTimes"].length).toBe(0);
+      expect(monitor['frameTimes'].length).toBe(0);
     });
 
-    it("should end frame and return metrics", () => {
+    it('should end frame and return metrics', () => {
       monitor.startFrame();
       const metrics = monitor.endFrame(16);
       expect(metrics).not.toBeNull();
@@ -74,7 +73,7 @@ describe("PerformanceMonitor", () => {
       }
     });
 
-    it("should return null when disabled", () => {
+    it('should return null when disabled', () => {
       monitor.startFrame();
       monitor.disable();
       const metrics = monitor.endFrame(16);
@@ -82,26 +81,26 @@ describe("PerformanceMonitor", () => {
     });
   });
 
-  describe("FPS Tracking", () => {
+  describe('FPS Tracking', () => {
     beforeEach(() => {
       monitor.enable(60);
     });
 
-    it("should calculate FPS from delta", () => {
+    it('should calculate FPS from delta', () => {
       monitor.startFrame();
       const metrics = monitor.endFrame(16.67); // ~60fps
       expect(metrics?.fps).toBeGreaterThan(55);
       expect(metrics?.fps).toBeLessThan(65);
     });
 
-    it("should track min and max FPS", () => {
+    it('should track min and max FPS', () => {
       monitor.startFrame();
       monitor.endFrame(33); // ~30fps
       monitor.startFrame();
       monitor.endFrame(16); // ~60fps
 
       // Wait for FPS update
-      monitor["lastFpsUpdate"] = 0;
+      monitor['lastFpsUpdate'] = 0;
       monitor.startFrame();
       monitor.endFrame(16);
 
@@ -110,25 +109,25 @@ describe("PerformanceMonitor", () => {
       expect(metrics.maxFps).toBeGreaterThanOrEqual(metrics.minFps);
     });
 
-    it("should track dropped frames", () => {
+    it('should track dropped frames', () => {
       monitor.startFrame();
       monitor.endFrame(50); // ~20fps, below 30 threshold
 
       // Wait for FPS update interval
-      monitor["lastFpsUpdate"] = 0;
+      monitor['lastFpsUpdate'] = 0;
       monitor.startFrame();
       monitor.endFrame(50);
 
-      expect(monitor["droppedFrames"]).toBeGreaterThan(0);
+      expect(monitor['droppedFrames']).toBeGreaterThan(0);
     });
   });
 
-  describe("Snapshots", () => {
+  describe('Snapshots', () => {
     beforeEach(() => {
       monitor.enable();
     });
 
-    it("should take snapshot with entity counts", () => {
+    it('should take snapshot with entity counts', () => {
       const snapshot = monitor.takeSnapshot(10, 5, 3);
       expect(snapshot.activeEntities).toBe(10);
       expect(snapshot.activeParticles).toBe(5);
@@ -136,48 +135,48 @@ describe("PerformanceMonitor", () => {
       expect(snapshot.timestamp).toBeGreaterThan(0);
     });
 
-    it("should limit snapshot history", () => {
+    it('should limit snapshot history', () => {
       for (let i = 0; i < 110; i++) {
         monitor.takeSnapshot(i, 0, 0);
       }
       expect(monitor.getSnapshots().length).toBeLessThanOrEqual(100);
     });
 
-    it("should clear snapshots", () => {
+    it('should clear snapshots', () => {
       monitor.takeSnapshot(1, 1, 1);
       monitor.clearSnapshots();
       expect(monitor.getSnapshots().length).toBe(0);
     });
   });
 
-  describe("Performance Report", () => {
+  describe('Performance Report', () => {
     beforeEach(() => {
       monitor.enable();
     });
 
-    it("should generate performance report", () => {
+    it('should generate performance report', () => {
       monitor.startFrame();
       monitor.endFrame(16);
       monitor.takeSnapshot(10, 5, 3);
 
       const report = monitor.getPerformanceReport();
-      expect(report).toContain("Performance Report");
-      expect(report).toContain("Current FPS");
-      expect(report).toContain("Active Entities");
+      expect(report).toContain('Performance Report');
+      expect(report).toContain('Current FPS');
+      expect(report).toContain('Active Entities');
     });
 
-    it("should include frame time statistics", () => {
+    it('should include frame time statistics', () => {
       const report = monitor.getPerformanceReport();
-      expect(report).toContain("Frame Time");
+      expect(report).toContain('Frame Time');
     });
   });
 
-  describe("Frame Time Statistics", () => {
+  describe('Frame Time Statistics', () => {
     beforeEach(() => {
       monitor.enable();
     });
 
-    it("should calculate frame time average", () => {
+    it('should calculate frame time average', () => {
       monitor.startFrame();
       monitor.endFrame(16);
       monitor.startFrame();
@@ -187,12 +186,12 @@ describe("PerformanceMonitor", () => {
       expect(average).toBeGreaterThan(0);
     });
 
-    it("should return 0 for empty samples", () => {
+    it('should return 0 for empty samples', () => {
       const average = monitor.getFrameTimeAverage();
       expect(average).toBe(0);
     });
 
-    it("should calculate percentiles", () => {
+    it('should calculate percentiles', () => {
       // Add multiple frame samples
       for (let i = 0; i < 100; i++) {
         monitor.startFrame();
@@ -206,12 +205,12 @@ describe("PerformanceMonitor", () => {
     });
   });
 
-  describe("Performance Check", () => {
+  describe('Performance Check', () => {
     beforeEach(() => {
       monitor.enable(60);
     });
 
-    it("should return true when performance is good", () => {
+    it('should return true when performance is good', () => {
       // Simulate good performance
       for (let i = 0; i < 10; i++) {
         monitor.startFrame();
@@ -224,14 +223,14 @@ describe("PerformanceMonitor", () => {
     // Skipped: This test needs refactoring due to circular buffer implementation
     // The isPerformanceGood() method uses getCurrentMetrics(16) which calculates
     // FPS based on the hardcoded delta parameter, not frame samples
-    it.skip("should return false when performance is poor", () => {
+    it.skip('should return false when performance is poor', () => {
       monitor.enable(60);
       // Original test logic
     });
   });
 
-  describe("Reset", () => {
-    it("should reset all data", () => {
+  describe('Reset', () => {
+    it('should reset all data', () => {
       monitor.enable();
       monitor.startFrame();
       monitor.endFrame(16);
@@ -240,16 +239,16 @@ describe("PerformanceMonitor", () => {
       monitor.reset();
 
       // After reset, arrays are re-initialized to fixed size
-      expect(monitor["frameSampleIndex"]).toBe(0);
-      expect(monitor["snapshotIndex"]).toBe(0);
-      expect(monitor["frameSamplesFilled"]).toBe(false);
-      expect(monitor["snapshotsFilled"]).toBe(false);
-      expect(monitor["droppedFrames"]).toBe(0);
+      expect(monitor['frameSampleIndex']).toBe(0);
+      expect(monitor['snapshotIndex']).toBe(0);
+      expect(monitor['frameSamplesFilled']).toBe(false);
+      expect(monitor['snapshotsFilled']).toBe(false);
+      expect(monitor['droppedFrames']).toBe(0);
     });
   });
 });
 
-describe("PerformanceProfiler", () => {
+describe('PerformanceProfiler', () => {
   beforeEach(() => {
     PerformanceProfiler.resetProfiles();
   });
@@ -258,86 +257,86 @@ describe("PerformanceProfiler", () => {
     PerformanceProfiler.disable();
   });
 
-  describe("Enable/Disable", () => {
-    it("should enable profiling", () => {
+  describe('Enable/Disable', () => {
+    it('should enable profiling', () => {
       PerformanceProfiler.enable();
-      expect(PerformanceProfiler["enabled"]).toBe(true);
+      expect(PerformanceProfiler['enabled']).toBe(true);
     });
 
-    it("should disable profiling", () => {
+    it('should disable profiling', () => {
       PerformanceProfiler.enable();
       PerformanceProfiler.disable();
-      expect(PerformanceProfiler["enabled"]).toBe(false);
+      expect(PerformanceProfiler['enabled']).toBe(false);
     });
   });
 
-  describe("Profile Tracking", () => {
+  describe('Profile Tracking', () => {
     beforeEach(() => {
       PerformanceProfiler.enable();
     });
 
-    it("should start and end profile", () => {
-      PerformanceProfiler.start("test");
-      const duration = PerformanceProfiler.end("test");
+    it('should start and end profile', () => {
+      PerformanceProfiler.start('test');
+      const duration = PerformanceProfiler.end('test');
       expect(duration).toBeGreaterThanOrEqual(0);
     });
 
-    it("should not track when disabled", () => {
+    it('should not track when disabled', () => {
       PerformanceProfiler.disable();
-      PerformanceProfiler.start("test");
-      const duration = PerformanceProfiler.end("test");
+      PerformanceProfiler.start('test');
+      const duration = PerformanceProfiler.end('test');
       expect(duration).toBe(0);
     });
 
-    it("should accumulate total time", () => {
-      PerformanceProfiler.start("test");
-      PerformanceProfiler.end("test");
-      PerformanceProfiler.start("test");
-      PerformanceProfiler.end("test");
+    it('should accumulate total time', () => {
+      PerformanceProfiler.start('test');
+      PerformanceProfiler.end('test');
+      PerformanceProfiler.start('test');
+      PerformanceProfiler.end('test');
 
-      const stats = PerformanceProfiler.getProfileStats("test");
+      const stats = PerformanceProfiler.getProfileStats('test');
       expect(stats?.callCount).toBe(2);
       expect(stats?.totalTime).toBeGreaterThan(0);
     });
   });
 
-  describe("Profile Statistics", () => {
+  describe('Profile Statistics', () => {
     beforeEach(() => {
       PerformanceProfiler.enable();
     });
 
-    it("should return null for non-existent profile", () => {
-      const stats = PerformanceProfiler.getProfileStats("nonexistent");
+    it('should return null for non-existent profile', () => {
+      const stats = PerformanceProfiler.getProfileStats('nonexistent');
       expect(stats).toBeNull();
     });
 
-    it("should return all profiles", () => {
-      PerformanceProfiler.start("profile1");
-      PerformanceProfiler.end("profile1");
-      PerformanceProfiler.start("profile2");
-      PerformanceProfiler.end("profile2");
+    it('should return all profiles', () => {
+      PerformanceProfiler.start('profile1');
+      PerformanceProfiler.end('profile1');
+      PerformanceProfiler.start('profile2');
+      PerformanceProfiler.end('profile2');
 
       const allProfiles = PerformanceProfiler.getAllProfiles();
       expect(allProfiles.size).toBe(2);
     });
 
-    it("should generate top profiles report", () => {
-      PerformanceProfiler.start("slow");
+    it('should generate top profiles report', () => {
+      PerformanceProfiler.start('slow');
       // Simulate some work
-      for (let i = 0; i < 1000000; i++) {}
-      PerformanceProfiler.end("slow");
+      for (let i = 0; i < 1000000; i++) { /* busy-wait */ }
+      PerformanceProfiler.end('slow');
 
-      PerformanceProfiler.start("fast");
-      PerformanceProfiler.end("fast");
+      PerformanceProfiler.start('fast');
+      PerformanceProfiler.end('fast');
 
       const report = PerformanceProfiler.reportTopProfiles(2);
-      expect(report).toContain("Top Performance Profiles");
-      expect(report).toContain("slow");
+      expect(report).toContain('Top Performance Profiles');
+      expect(report).toContain('slow');
     });
   });
 });
 
-describe("Global Functions", () => {
+describe('Global Functions', () => {
   beforeEach(() => {
     resetPerformanceData();
   });
@@ -346,33 +345,33 @@ describe("Global Functions", () => {
     stopPerformanceMonitoring();
   });
 
-  describe("startPerformanceMonitoring", () => {
-    it("should start monitoring", () => {
+  describe('startPerformanceMonitoring', () => {
+    it('should start monitoring', () => {
       startPerformanceMonitoring(60);
       const monitor = PerformanceMonitor.getInstance();
-      expect(monitor["enabled"]).toBe(true);
+      expect(monitor['enabled']).toBe(true);
     });
   });
 
-  describe("stopPerformanceMonitoring", () => {
-    it("should stop monitoring", () => {
+  describe('stopPerformanceMonitoring', () => {
+    it('should stop monitoring', () => {
       startPerformanceMonitoring();
       stopPerformanceMonitoring();
       const monitor = PerformanceMonitor.getInstance();
-      expect(monitor["enabled"]).toBe(false);
+      expect(monitor['enabled']).toBe(false);
     });
   });
 
-  describe("getPerformanceReport", () => {
-    it("should return performance report", () => {
+  describe('getPerformanceReport', () => {
+    it('should return performance report', () => {
       startPerformanceMonitoring();
       const report = getPerformanceReport();
-      expect(report).toContain("Performance Report");
+      expect(report).toContain('Performance Report');
     });
   });
 
-  describe("resetPerformanceData", () => {
-    it("should reset all performance data", () => {
+  describe('resetPerformanceData', () => {
+    it('should reset all performance data', () => {
       startPerformanceMonitoring();
       const monitor = PerformanceMonitor.getInstance();
       monitor.startFrame();
@@ -381,8 +380,8 @@ describe("Global Functions", () => {
       resetPerformanceData();
 
       // After reset, frameSampleIndex should be 0
-      expect(monitor["frameSampleIndex"]).toBe(0);
-      expect(monitor["frameSamplesFilled"]).toBe(false);
+      expect(monitor['frameSampleIndex']).toBe(0);
+      expect(monitor['frameSamplesFilled']).toBe(false);
     });
   });
 });

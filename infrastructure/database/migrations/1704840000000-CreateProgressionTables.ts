@@ -108,14 +108,14 @@ export class CreateProgressionTables1704840000000 implements MigrationInterface 
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`DROP TABLE achievement_progress;`);
-    await queryRunner.query(`DROP TABLE achievements;`);
-    await queryRunner.query(`DROP TABLE inventory;`);
-    await queryRunner.query(`DROP TABLE player_unlocks;`);
-    await queryRunner.query(`DROP TABLE unlockables;`);
-    await queryRunner.query(`DROP TYPE unlockable_type;`);
-    await queryRunner.query(`DROP TABLE player_stats;`);
-    await queryRunner.query(`DROP TABLE player_profiles;`);
-    await queryRunner.query(`DROP TYPE achievement_tier;`);
+    await queryRunner.query('DROP TABLE achievement_progress;');
+    await queryRunner.query('DROP TABLE achievements;');
+    await queryRunner.query('DROP TABLE inventory;');
+    await queryRunner.query('DROP TABLE player_unlocks;');
+    await queryRunner.query('DROP TABLE unlockables;');
+    await queryRunner.query('DROP TYPE unlockable_type;');
+    await queryRunner.query('DROP TABLE player_stats;');
+    await queryRunner.query('DROP TABLE player_profiles;');
+    await queryRunner.query('DROP TYPE achievement_tier;');
   }
 }
