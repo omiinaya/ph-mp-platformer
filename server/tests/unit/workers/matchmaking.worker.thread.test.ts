@@ -3,7 +3,6 @@
  * These tests simulate the worker thread behavior to improve coverage.
  */
 
-import { parentPort } from 'worker_threads';
 import { MatchmakingRequest } from '../../../src/types/matchmaking';
 
 // Mock worker_threads first
@@ -18,7 +17,7 @@ jest.mock('worker_threads', () => ({
 }));
 
 // Must import after mocking
-const mockMatchmakingWorker = jest.requireMock('../../../src/workers/matchmaking.worker');
+// Note: we mock the worker but don't need to reference it directly
 
 describe('matchmaking.worker - Worker Thread', () => {
   let messageHandler: Function | null = null;
