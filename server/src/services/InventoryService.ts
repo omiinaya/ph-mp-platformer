@@ -84,13 +84,12 @@ export class InventoryService {
    */
   async transferItem(fromPlayerId: string, toPlayerId: string, itemId: string, quantity: number = 1): Promise<boolean> {
     return this.dataSource.transaction(async (_manager) => {
-      const fromRepo = new InventoryRepository(this.dataSource);
-      const toRepo = new InventoryRepository(this.dataSource);
-      const removed = await fromRepo.removeItem(fromPlayerId, itemId, quantity);
+      // Use the injected repository instance for both operations
+      const removed = await this.inventoryRepo.removeItem(fromPlayerId, itemId, quantity);
       if (!removed) {
         throw new Error('Source player does not have enough items');
       }
-      await toRepo.addItem(toPlayerId, itemId, quantity);
+      await this.inventoryRepo.addItem(toPlayerId, itemId, quantity, undefined);
       logger.info(`Transferred item ${itemId} x${quantity} from ${fromPlayerId} to ${toPlayerId}`);
       return true;
     }).catch(error => {

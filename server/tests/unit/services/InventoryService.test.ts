@@ -9,7 +9,19 @@ jest.mock('../../../src/persistence/database', () => ({
   },
 }));
 
-jest.mock('../../../src/persistence/repositories/InventoryRepository');
+jest.mock('../../../src/persistence/repositories/InventoryRepository', () => {
+  return {
+    InventoryRepository: jest.fn().mockImplementation(() => {
+      return {
+        findByPlayerId: jest.fn(),
+        findByItemId: jest.fn(),
+        addItem: jest.fn(),
+        removeItem: jest.fn(),
+        getTotalItemCount: jest.fn(),
+      };
+    }),
+  };
+});
 
 describe('InventoryService', () => {
   let inventoryService: InventoryService;
@@ -125,7 +137,26 @@ describe('InventoryService', () => {
   });
 
   describe('transferItem', () => {
-    it('should transfer item between players', async () => {
+    it('should transfer item between players executing actual callback', async () => {
+      // Mock transaction to execute the callback with mocked repos
+      const mockTransaction = jest.fn().mockImplementation(async (callback: Function) => {
+        return await callback({}); // Mock manager
+      });
+      (AppDataSource.transaction as jest.Mock).mockImplementation(mockTransaction);
+      
+      // Mock repository methods for the callback
+      mockInventoryRepo.removeItem.mockResolvedValue(true);
+      mockInventoryRepo.addItem.mockResolvedValue({} as any);
+
+      const result = await inventoryService.transferItem('player1', 'player2', 'sword', 1);
+      
+      expect(AppDataSource.transaction).toHaveBeenCalled();
+      expect(mockInventoryRepo.removeItem).toHaveBeenCalledWith('player1', 'sword', 1);
+      expect(mockInventoryRepo.addItem).toHaveBeenCalledWith('player2', 'sword', 1, undefined);
+      expect(result).toBe(true);
+    });
+
+    it('should transfer item between players (legacy mock)', async () => {
       // Mock transaction to succeed - callback returns true
       const mockTransaction = jest.fn().mockResolvedValue(true);
       (AppDataSource.transaction as jest.Mock).mockImplementation(mockTransaction);
@@ -193,6 +224,41 @@ describe('InventoryService', () => {
 
       const result = await inventoryService.transferItem('player1', 'player2', 'sword', 1);
 
+      expect(result).toBe(false);
+    });
+
+    it('should return false when source player has insufficient items (removeItem returns false)', async () => {
+      // Mock transaction to execute the callback; removeItem returns false
+      const mockTransaction = jest.fn().mockImplementation(async (callback: Function) => {
+        return await callback({});
+      });
+      (AppDataSource.transaction as jest.Mock).mockImplementation(mockTransaction);
+      
+      // removeItem returns false (insufficient)
+      mockInventoryRepo.removeItem.mockResolvedValue(false);
+
+      const result = await inventoryService.transferItem('player1', 'player2', 'sword', 1);
+
+      expect(mockInventoryRepo.removeItem).toHaveBeenCalledWith('player1', 'sword', 1);
+      // addItem should not be called because of early throw
+      expect(mockInventoryRepo.addItem).not.toHaveBeenCalled();
+      expect(result).toBe(false);
+    });
+
+    it('should return false when addItem throws an error during transaction', async () => {
+      // Mock transaction to execute the callback; addItem rejects
+      const mockTransaction = jest.fn().mockImplementation(async (callback: Function) => {
+        return await callback({});
+      });
+      (AppDataSource.transaction as jest.Mock).mockImplementation(mockTransaction);
+      
+      mockInventoryRepo.removeItem.mockResolvedValue(true);
+      mockInventoryRepo.addItem.mockRejectedValue(new Error('DB error'));
+
+      const result = await inventoryService.transferItem('player1', 'player2', 'sword', 1);
+
+      expect(mockInventoryRepo.removeItem).toHaveBeenCalledWith('player1', 'sword', 1);
+      expect(mockInventoryRepo.addItem).toHaveBeenCalledWith('player2', 'sword', 1, undefined);
       expect(result).toBe(false);
     });
   });
