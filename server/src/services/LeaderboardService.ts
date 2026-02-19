@@ -81,19 +81,22 @@ export class LeaderboardService {
 
   /**
    * Gets the top players by level.
-   * Results are cached for 5 minutes.
+   * Results are cached for 5 minutes to improve performance.
    * @param limit - Maximum number of players to return (default: 10).
+   * @param useCache - Whether to use cached results (default: true).
    * @returns Promise resolving to array of player level entries.
    */
-  async getTopPlayersByLevel(limit: number = 10): Promise<any[]> {
+  async getTopPlayersByLevel(limit: number = 10, useCache: boolean = true): Promise<any[]> {
     const cacheKey = `leaderboard:top_level:${limit}`;
-    const cached = await this.redisClient.get(cacheKey);
-    if (cached) {
-      try {
-        return JSON.parse(cached);
-      } catch (error) {
-        logger.warn('Failed to parse cached leaderboard data, refetching from DB');
-        // Continue to fetch from database
+    if (useCache) {
+      const cached = await this.redisClient.get(cacheKey);
+      if (cached) {
+        try {
+          return JSON.parse(cached);
+        } catch (error) {
+          logger.warn('Failed to parse cached leaderboard data, refetching from DB');
+          // Continue to fetch from database
+        }
       }
     }
 
@@ -106,7 +109,9 @@ export class LeaderboardService {
       coins: profile.coins,
     }));
 
-    await this.redisClient.setEx(cacheKey, 300, JSON.stringify(result));
+    if (useCache) {
+      await this.redisClient.setEx(cacheKey, 300, JSON.stringify(result)); // 5 minutes TTL
+    }
     return result;
   }
 
