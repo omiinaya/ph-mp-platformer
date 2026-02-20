@@ -185,20 +185,20 @@ server/src/
 
 ## Technology Stack
 
-| Layer | Technology | Purpose |
-|-------|------------|---------|
-| Client Game | Phaser 3 | 2D game engine |
-| Client Lang | TypeScript | Type safety |
-| Server | Node.js | Runtime |
-| Web Server | Express | REST API |
-| Real-time | Socket.IO | WebSocket |
-| Database | PostgreSQL | Primary storage |
-| ORM | TypeORM | Database abstraction |
-| Cache | Redis | Sessions, cache |
-| Auth | JWT | Token-based auth |
-| Logging | Winston | Application logs |
-| Testing | Jest | Unit/integration tests |
-| Build | Webpack | Client bundling |
+| Layer       | Technology | Purpose                |
+| ----------- | ---------- | ---------------------- |
+| Client Game | Phaser 3   | 2D game engine         |
+| Client Lang | TypeScript | Type safety            |
+| Server      | Node.js    | Runtime                |
+| Web Server  | Express    | REST API               |
+| Real-time   | Socket.IO  | WebSocket              |
+| Database    | PostgreSQL | Primary storage        |
+| ORM         | TypeORM    | Database abstraction   |
+| Cache       | Redis      | Sessions, cache        |
+| Auth        | JWT        | Token-based auth       |
+| Logging     | Winston    | Application logs       |
+| Testing     | Jest       | Unit/integration tests |
+| Build       | Webpack    | Client bundling        |
 
 ## Deployment Architecture
 

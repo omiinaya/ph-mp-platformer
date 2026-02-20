@@ -22,15 +22,15 @@ We will implement a multi-layer caching strategy:
 interface CacheConfig {
   // L1: In-memory (fast, per-instance)
   local: {
-    enabled: true,
-    ttl: 60, // 1 minute
-    maxSize: 1000 // items
+    enabled: true;
+    ttl: 60; // 1 minute
+    maxSize: 1000; // items
   };
-  
+
   // L2: Redis (distributed, persistent)
   redis: {
-    enabled: true,
-    ttl: 300, // 5 minutes
+    enabled: true;
+    ttl: 300; // 5 minutes
   };
 }
 ```
@@ -63,7 +63,11 @@ async function getCached<T>(key: string): Promise<T | null> {
   return cached ? JSON.parse(cached) : null;
 }
 
-async function setCached<T>(key: string, value: T, ttl: number = 300): Promise<void> {
+async function setCached<T>(
+  key: string,
+  value: T,
+  ttl: number = 300,
+): Promise<void> {
   await redis.setex(key, ttl, JSON.stringify(value));
 }
 ```
@@ -73,25 +77,25 @@ async function setCached<T>(key: string, value: T, ttl: number = 300): Promise<v
 ```typescript
 async function getPlayerData(playerId: string) {
   const cacheKey = `player:${playerId}`;
-  
+
   // 1. Check local cache
   let data = getCachedLocal(cacheKey);
   if (data) return data;
-  
+
   // 2. Check Redis
   data = await getCached(cacheKey);
   if (data) {
     setCachedLocal(cacheKey, data);
     return data;
   }
-  
+
   // 3. Fetch from database
   data = await database.players.find(playerId);
-  
+
   // 4. Store in caches
   setCachedLocal(cacheKey, data);
   setCached(cacheKey, data);
-  
+
   return data;
 }
 ```
@@ -103,7 +107,7 @@ async function getPlayerData(playerId: string) {
 ```typescript
 async function updatePlayer(playerId: string, updates: Partial<Player>) {
   await database.players.update(playerId, updates);
-  
+
   // Invalidate caches
   const cacheKey = `player:${playerId}`;
   localCache.del(cacheKey);
@@ -113,12 +117,12 @@ async function updatePlayer(playerId: string, updates: Partial<Player>) {
 
 ### Time-Based Expiration
 
-| Data Type | TTL | Reason |
-|-----------|-----|--------|
-| Player data | 5 min | Updates frequently |
-| Leaderboard | 1 min | Changes on each game |
-| Game config | 1 hour | Rarely changes |
-| Static assets | 24 hours | Never changes |
+| Data Type     | TTL      | Reason               |
+| ------------- | -------- | -------------------- |
+| Player data   | 5 min    | Updates frequently   |
+| Leaderboard   | 1 min    | Changes on each game |
+| Game config   | 1 hour   | Rarely changes       |
+| Static assets | 24 hours | Never changes        |
 
 ## Monitoring
 
@@ -132,9 +136,10 @@ metrics.increment('cache.miss.redis');
 ```
 
 Target hit rates:
+
 - Local cache: > 70%
 - Redis cache: > 90%
 
 ---
 
-*Date: 2026-02-17*
+_Date: 2026-02-17_

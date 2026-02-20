@@ -17,12 +17,12 @@ These bugs must be fixed before production deployment.
 
 ```typescript
 // FIXED: All listeners now properly cleaned up in destroy()
-this.events.off("enemy:projectile-fired");
-this.events.off("player:combo-changed");
-this.events.off("player:combo-reset");
-this.events.off("player:parry-successful");
-this.events.off("player:item-picked-up");
-this.events.off("player:healed");
+this.events.off('enemy:projectile-fired');
+this.events.off('player:combo-changed');
+this.events.off('player:combo-reset');
+this.events.off('player:parry-successful');
+this.events.off('player:item-picked-up');
+this.events.off('player:healed');
 // ... plus 16 other events
 ```
 
@@ -35,7 +35,7 @@ this.events.off("player:healed");
 
 ```typescript
 // FIXED: Already correct
-synchronize: process.env.NODE_ENV === "development";
+synchronize: process.env.NODE_ENV === 'development';
 ```
 
 ### 3. JWT Authentication Placeholder ✅ FIXED

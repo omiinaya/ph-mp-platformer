@@ -24,11 +24,11 @@ spec:
               name: http
           resources:
             requests:
-              memory: "64Mi"
-              cpu: "50m"
+              memory: '64Mi'
+              cpu: '50m'
             limits:
-              memory: "128Mi"
-              cpu: "100m"
+              memory: '128Mi'
+              cpu: '100m'
           livenessProbe:
             httpGet:
               path: /
@@ -63,8 +63,8 @@ metadata:
   namespace: phaser-platformer
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+    cert-manager.io/cluster-issuer: 'letsencrypt-prod'
 spec:
   ingressClassName: nginx
   tls:

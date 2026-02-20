@@ -328,7 +328,7 @@ update(dt: number) {
 
 ```typescript
 // Use Phaser's built-in particle system
-const particles = this.add.particles("particle");
+const particles = this.add.particles('particle');
 
 const emitter = particles.createEmitter({
   x: x,
@@ -336,7 +336,7 @@ const emitter = particles.createEmitter({
   speed: { min: -100, max: 100 },
   angle: { min: 0, max: 360 },
   scale: { start: 1, end: 0 },
-  blendMode: "ADD",
+  blendMode: 'ADD',
   lifespan: 600,
   gravityY: 300,
   quantity: 50,
@@ -425,7 +425,7 @@ node --inspect-brk server/src/index.ts
 // Shows FPS counter in top-left
 
 // Access detailed metrics
-import { getPerformanceReport } from "./core/PerformanceMonitor";
+import { getPerformanceReport } from './core/PerformanceMonitor';
 console.log(getPerformanceReport());
 ```
 
@@ -433,10 +433,10 @@ console.log(getPerformanceReport());
 
 ```typescript
 // Check for leaks
-import { checkMemoryLeaks } from "./core/MemoryTracker";
+import { checkMemoryLeaks } from './core/MemoryTracker';
 const leaks = checkMemoryLeaks(5000);
 if (leaks.length > 0) {
-  console.warn("Memory leaks detected:", leaks);
+  console.warn('Memory leaks detected:', leaks);
 }
 ```
 

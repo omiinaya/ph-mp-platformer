@@ -9,10 +9,10 @@
  * Usage: node scripts/generate-sound-effects.js
  */
 
-const fs = require("fs");
-const path = require("path");
+const fs = require('fs');
+const path = require('path');
 
-const AUDIO_DIR = path.join(__dirname, "../client/public/assets/audio");
+const AUDIO_DIR = path.join(__dirname, '../client/public/assets/audio');
 
 // Ensure audio directory exists
 if (!fs.existsSync(AUDIO_DIR)) {
@@ -26,10 +26,10 @@ function writeWAV(filename, audioData, sampleRate = 44100) {
   const buffer = Buffer.alloc(44 + audioData.length * 2);
 
   // WAV Header
-  buffer.write("RIFF", 0);
+  buffer.write('RIFF', 0);
   buffer.writeUInt32LE(36 + audioData.length * 2, 4);
-  buffer.write("WAVE", 8);
-  buffer.write("fmt ", 12);
+  buffer.write('WAVE', 8);
+  buffer.write('fmt ', 12);
   buffer.writeUInt32LE(16, 16);
   buffer.writeUInt16LE(1, 20); // PCM
   buffer.writeUInt16LE(1, 22); // Mono
@@ -37,7 +37,7 @@ function writeWAV(filename, audioData, sampleRate = 44100) {
   buffer.writeUInt32LE(sampleRate * 2, 28);
   buffer.writeUInt16LE(2, 32);
   buffer.writeUInt16LE(16, 34);
-  buffer.write("data", 36);
+  buffer.write('data', 36);
   buffer.writeUInt32LE(audioData.length * 2, 40);
 
   // Audio data
@@ -65,8 +65,8 @@ function generateJumpSound() {
     audioData[i] = Math.sin(2 * Math.PI * freq * t) * envelope * 0.5;
   }
 
-  writeWAV(path.join(AUDIO_DIR, "jump.wav"), audioData);
-  console.log("✓ Generated jump.wav");
+  writeWAV(path.join(AUDIO_DIR, 'jump.wav'), audioData);
+  console.log('✓ Generated jump.wav');
 }
 
 /**
@@ -90,8 +90,8 @@ function generateCoinSound() {
       0.5;
   }
 
-  writeWAV(path.join(AUDIO_DIR, "coin.wav"), audioData);
-  console.log("✓ Generated coin.wav");
+  writeWAV(path.join(AUDIO_DIR, 'coin.wav'), audioData);
+  console.log('✓ Generated coin.wav');
 }
 
 /**
@@ -113,8 +113,8 @@ function generateEnemyHitSound() {
       (Math.sin(2 * Math.PI * freq * t) * 0.7 + noise) * envelope * 0.6;
   }
 
-  writeWAV(path.join(AUDIO_DIR, "enemy_hit.wav"), audioData);
-  console.log("✓ Generated enemy_hit.wav");
+  writeWAV(path.join(AUDIO_DIR, 'enemy_hit.wav'), audioData);
+  console.log('✓ Generated enemy_hit.wav');
 }
 
 /**
@@ -133,8 +133,8 @@ function generatePlayerHitSound() {
     audioData[i] = Math.sin(2 * Math.PI * freq * t) * envelope * 0.7;
   }
 
-  writeWAV(path.join(AUDIO_DIR, "player_hit.wav"), audioData);
-  console.log("✓ Generated player_hit.wav");
+  writeWAV(path.join(AUDIO_DIR, 'player_hit.wav'), audioData);
+  console.log('✓ Generated player_hit.wav');
 }
 
 /**
@@ -160,8 +160,8 @@ function generateHealthPickupSound() {
       0.5;
   }
 
-  writeWAV(path.join(AUDIO_DIR, "health_pickup.wav"), audioData);
-  console.log("✓ Generated health_pickup.wav");
+  writeWAV(path.join(AUDIO_DIR, 'health_pickup.wav'), audioData);
+  console.log('✓ Generated health_pickup.wav');
 }
 
 /**
@@ -185,8 +185,8 @@ function generateLevelCompleteSound() {
     audioData[i] = Math.sin(2 * Math.PI * freq * t) * envelope * 0.5;
   }
 
-  writeWAV(path.join(AUDIO_DIR, "level_complete.wav"), audioData);
-  console.log("✓ Generated level_complete.wav");
+  writeWAV(path.join(AUDIO_DIR, 'level_complete.wav'), audioData);
+  console.log('✓ Generated level_complete.wav');
 }
 
 /**
@@ -205,8 +205,8 @@ function generateGameOverSound() {
     audioData[i] = Math.sin(2 * Math.PI * freq * t) * envelope * 0.6;
   }
 
-  writeWAV(path.join(AUDIO_DIR, "game_over.wav"), audioData);
-  console.log("✓ Generated game_over.wav");
+  writeWAV(path.join(AUDIO_DIR, 'game_over.wav'), audioData);
+  console.log('✓ Generated game_over.wav');
 }
 
 /**
@@ -227,8 +227,8 @@ function generateAttackSound() {
       (Math.sin(2 * Math.PI * freq * t) * 0.7 + noise) * envelope * 0.5;
   }
 
-  writeWAV(path.join(AUDIO_DIR, "attack.wav"), audioData);
-  console.log("✓ Generated attack.wav");
+  writeWAV(path.join(AUDIO_DIR, 'attack.wav'), audioData);
+  console.log('✓ Generated attack.wav');
 }
 
 /**
@@ -247,8 +247,8 @@ function generateFootstepSound() {
     audioData[i] = noise * envelope * 0.3;
   }
 
-  writeWAV(path.join(AUDIO_DIR, "footstep.wav"), audioData);
-  console.log("✓ Generated footstep.wav");
+  writeWAV(path.join(AUDIO_DIR, 'footstep.wav'), audioData);
+  console.log('✓ Generated footstep.wav');
 }
 
 /**
@@ -269,8 +269,8 @@ function generateLandingSound() {
       (Math.sin(2 * Math.PI * freq * t) * 0.5 + noise) * envelope * 0.5;
   }
 
-  writeWAV(path.join(AUDIO_DIR, "landing.wav"), audioData);
-  console.log("✓ Generated landing.wav");
+  writeWAV(path.join(AUDIO_DIR, 'landing.wav'), audioData);
+  console.log('✓ Generated landing.wav');
 }
 
 /**
@@ -300,8 +300,8 @@ function generateBackgroundMusic() {
       0.3;
   }
 
-  writeWAV(path.join(AUDIO_DIR, "menu_music.mp3"), audioData);
-  console.log("✓ Generated menu_music.mp3");
+  writeWAV(path.join(AUDIO_DIR, 'menu_music.mp3'), audioData);
+  console.log('✓ Generated menu_music.mp3');
 }
 
 /**
@@ -336,8 +336,8 @@ function generateGameplayMusic() {
       0.3;
   }
 
-  writeWAV(path.join(AUDIO_DIR, "gameplay_music.mp3"), audioData);
-  console.log("✓ Generated gameplay_music.mp3");
+  writeWAV(path.join(AUDIO_DIR, 'gameplay_music.mp3'), audioData);
+  console.log('✓ Generated gameplay_music.mp3');
 }
 
 /**
@@ -362,12 +362,12 @@ function generateVictoryMusic() {
     audioData[i] = Math.sin(2 * Math.PI * freq * t) * envelope * 0.5;
   }
 
-  writeWAV(path.join(AUDIO_DIR, "victory_music.mp3"), audioData);
-  console.log("✓ Generated victory_music.mp3");
+  writeWAV(path.join(AUDIO_DIR, 'victory_music.mp3'), audioData);
+  console.log('✓ Generated victory_music.mp3');
 }
 
 // Main execution
-console.log("🎵 Generating sound effects...\n");
+console.log('🎵 Generating sound effects...\n');
 
 try {
   // Generate SFX
@@ -387,15 +387,15 @@ try {
   generateGameplayMusic();
   generateVictoryMusic();
 
-  console.log("\n✅ Sound effect generation complete!");
+  console.log('\n✅ Sound effect generation complete!');
   console.log(`\nOutput directory: ${AUDIO_DIR}`);
-  console.log("\nFiles generated:");
+  console.log('\nFiles generated:');
   const files = fs.readdirSync(AUDIO_DIR);
   files.forEach((file) => {
     const stats = fs.statSync(path.join(AUDIO_DIR, file));
     console.log(`  - ${file} (${Math.round(stats.size / 1024)}KB)`);
   });
 } catch (error) {
-  console.error("❌ Error generating sound effects:", error.message);
+  console.error('❌ Error generating sound effects:', error.message);
   process.exit(1);
 }

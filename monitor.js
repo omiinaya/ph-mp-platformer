@@ -22,7 +22,10 @@ function runCommand(cmd, cwd = null) {
 async function runTests() {
   const result = await runCommand('npm run test', __dirname);
   const output = result.stdout + result.stderr;
-  const passed = /Test Suites:.*passed/.test(output) && /Tests:.*passed/.test(output) && result.error === null;
+  const passed =
+    /Test Suites:.*passed/.test(output) &&
+    /Tests:.*passed/.test(output) &&
+    result.error === null;
   return { passed, output };
 }
 
@@ -58,7 +61,10 @@ async function checkStatus() {
       const status = await runCommand('git status --porcelain', __dirname);
       if (status.stdout.trim()) {
         await runCommand('git add .', __dirname);
-        await runCommand('git commit -m "chore: auto-format with prettier"', __dirname);
+        await runCommand(
+          'git commit -m "chore: auto-format with prettier"',
+          __dirname,
+        );
         await runCommand('git push origin main', __dirname);
       }
     } else {
@@ -87,7 +93,10 @@ async function checkStatus() {
   // Tests
   const tests = await runTests();
   if (!tests.passed) {
-    log('Test failures detected. Investigation needed. Output: ' + tests.output.substring(0, 2000));
+    log(
+      'Test failures detected. Investigation needed. Output: ' +
+        tests.output.substring(0, 2000),
+    );
     // Could attempt to fix common issues, but generally requires manual debugging
   } else {
     log('All tests passed.');
@@ -100,10 +109,16 @@ async function checkStatus() {
 
   // Check for any lingering issues like worker leaks (warnings)
   if (tests.output.includes('worker process has failed to exit gracefully')) {
-    log('Warning: worker process exit issues detected. Consider investigating test cleanup.');
+    log(
+      'Warning: worker process exit issues detected. Consider investigating test cleanup.',
+    );
   }
 
-  log('Status check complete. Next check in ' + (CHECK_INTERVAL / 60000) + ' minutes.\n');
+  log(
+    'Status check complete. Next check in ' +
+      CHECK_INTERVAL / 60000 +
+      ' minutes.\n',
+  );
 }
 
 // Run indefinitely

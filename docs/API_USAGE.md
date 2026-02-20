@@ -44,6 +44,7 @@ GET /api/players/me
 ```
 
 Response:
+
 ```json
 {
   "id": "uuid",
@@ -78,10 +79,16 @@ GET /api/players/me/inventory
 ```
 
 Response:
+
 ```json
 {
   "items": [
-    { "id": "item_1", "type": "skin", "name": "Forest Skin", "acquiredAt": "2024-01-15" },
+    {
+      "id": "item_1",
+      "type": "skin",
+      "name": "Forest Skin",
+      "acquiredAt": "2024-01-15"
+    },
     { "id": "item_2", "type": "powerup", "name": "Double Jump", "quantity": 3 }
   ],
   "currency": { "gems": 150, "coins": 5000 }
@@ -97,6 +104,7 @@ GET /api/progression/levels
 ```
 
 Response:
+
 ```json
 {
   "levels": [
@@ -136,6 +144,7 @@ GET /api/leaderboard?limit=100&offset=0
 ```
 
 Response:
+
 ```json
 {
   "entries": [
@@ -169,6 +178,7 @@ Content-Type: application/json
 ```
 
 Response:
+
 ```json
 {
   "lobbyId": "lobby_abc123",
@@ -192,6 +202,7 @@ GET /api/unlockables
 ```
 
 Response:
+
 ```json
 {
   "unlockables": [
@@ -222,7 +233,7 @@ POST /api/unlockables/:itemId/unlock
 import { io } from 'socket.io-client';
 
 const socket = io('http://localhost:4000', {
-  auth: { token: 'JWT_TOKEN' }
+  auth: { token: 'JWT_TOKEN' },
 });
 ```
 
@@ -240,7 +251,7 @@ socket.emit('game:join', { lobbyCode: 'ABC123' });
 socket.emit('game:input', {
   type: 'movement',
   data: { x: 1, y: 0 },
-  timestamp: Date.now()
+  timestamp: Date.now(),
 });
 ```
 
@@ -249,7 +260,7 @@ socket.emit('game:input', {
 ```typescript
 socket.emit('game:action', {
   type: 'jump',
-  timestamp: Date.now()
+  timestamp: Date.now(),
 });
 ```
 
@@ -361,11 +372,11 @@ socket.on('connect_error', (error) => {
 
 ## Rate Limits
 
-| Endpoint | Limit |
-|----------|-------|
-| Auth | 10/min |
+| Endpoint      | Limit   |
+| ------------- | ------- |
+| Auth          | 10/min  |
 | API (general) | 100/min |
-| Game inputs | 60/sec |
+| Game inputs   | 60/sec  |
 
 ## Error Responses
 
@@ -378,6 +389,7 @@ socket.on('connect_error', (error) => {
 ```
 
 Common error codes:
+
 - `AUTH_REQUIRED` - Missing authentication
 - `AUTH_INVALID` - Invalid token
 - `NOT_FOUND` - Resource not found

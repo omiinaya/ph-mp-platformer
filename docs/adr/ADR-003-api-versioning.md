@@ -78,4 +78,4 @@ async function fetchPlayers() {
 
 ---
 
-*Date: 2026-02-17*
+_Date: 2026-02-17_

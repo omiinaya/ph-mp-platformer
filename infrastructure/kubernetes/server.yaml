@@ -34,7 +34,7 @@ spec:
                   name: phaser-platformer-config
                   key: PORT
             - name: DB_HOST
-              value: "postgres-service"
+              value: 'postgres-service'
             - name: DB_PORT
               valueFrom:
                 configMapKeyRef:
@@ -77,11 +77,11 @@ spec:
                   key: CORS_ORIGIN
           resources:
             requests:
-              memory: "256Mi"
-              cpu: "250m"
+              memory: '256Mi'
+              cpu: '250m'
             limits:
-              memory: "512Mi"
-              cpu: "500m"
+              memory: '512Mi'
+              cpu: '500m'
           livenessProbe:
             httpGet:
               path: /health

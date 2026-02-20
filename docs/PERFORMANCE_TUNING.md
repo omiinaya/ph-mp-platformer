@@ -116,7 +116,7 @@ Test with simulated latency:
 ```typescript
 // Add artificial latency
 const latency = 100; // ms
-const jitter = 20;   // ms
+const jitter = 20; // ms
 ```
 
 ## Monitoring
@@ -178,14 +178,14 @@ export class PlayerProgress {}
 
 ## Performance Targets
 
-| Metric | Target | Critical |
-|--------|--------|----------|
-| Server FPS | 60 | <30 |
-| Client FPS | 60 | <30 |
-| Tick Rate | 20Hz | 10Hz |
-| DB Query | <50ms | >200ms |
-| Redis Ops | <5ms | >20ms |
-| Latency (p99) | <100ms | >300ms |
+| Metric        | Target | Critical |
+| ------------- | ------ | -------- |
+| Server FPS    | 60     | <30      |
+| Client FPS    | 60     | <30      |
+| Tick Rate     | 20Hz   | 10Hz     |
+| DB Query      | <50ms  | >200ms   |
+| Redis Ops     | <5ms   | >20ms    |
+| Latency (p99) | <100ms | >300ms   |
 
 ## Troubleshooting
 

@@ -5,11 +5,13 @@
 ### Player Endpoints
 
 #### Get Player Profile
+
 ```
 GET /api/players/:id
 ```
 
 **Response:**
+
 ```json
 {
   "id": "string",
@@ -20,11 +22,13 @@ GET /api/players/:id
 ```
 
 #### Create Player
+
 ```
 POST /api/players
 ```
 
 **Body:**
+
 ```json
 {
   "username": "string",
@@ -33,11 +37,13 @@ POST /api/players
 ```
 
 #### Update Player
+
 ```
 PUT /api/players/:id
 ```
 
 **Body:**
+
 ```json
 {
   "username": "string",
@@ -48,11 +54,13 @@ PUT /api/players/:id
 ### Inventory Endpoints
 
 #### Get Player Inventory
+
 ```
 GET /api/inventory/:playerId
 ```
 
 **Response:**
+
 ```json
 {
   "playerId": "string",
@@ -67,11 +75,13 @@ GET /api/inventory/:playerId
 ```
 
 #### Add Item to Inventory
+
 ```
 POST /api/inventory/:playerId/items
 ```
 
 **Body:**
+
 ```json
 {
   "itemId": "string",
@@ -80,6 +90,7 @@ POST /api/inventory/:playerId/items
 ```
 
 #### Remove Item from Inventory
+
 ```
 DELETE /api/inventory/:playerId/items/:itemId
 ```
@@ -87,11 +98,13 @@ DELETE /api/inventory/:playerId/items/:itemId
 ### Progression Endpoints
 
 #### Get Player Progress
+
 ```
 GET /api/progression/:playerId
 ```
 
 **Response:**
+
 ```json
 {
   "playerId": "string",
@@ -102,11 +115,13 @@ GET /api/progression/:playerId
 ```
 
 #### Unlock Level
+
 ```
 POST /api/progression/:playerId/levels
 ```
 
 **Body:**
+
 ```json
 {
   "levelId": "string"
@@ -116,15 +131,18 @@ POST /api/progression/:playerId/levels
 ### Leaderboard Endpoints
 
 #### Get Top Players
+
 ```
 GET /api/leaderboard?limit=10&sortBy=score
 ```
 
 **Query Parameters:**
+
 - `limit`: Number of results (default: 10)
 - `sortBy`: Field to sort by (score, wins, level)
 
 **Response:**
+
 ```json
 [
   {
@@ -137,11 +155,13 @@ GET /api/leaderboard?limit=10&sortBy=score
 ```
 
 #### Submit Score
+
 ```
 POST /api/leaderboard/scores
 ```
 
 **Body:**
+
 ```json
 {
   "playerId": "string",
@@ -156,51 +176,58 @@ POST /api/leaderboard/scores
 ### Client → Server
 
 #### Join Game
+
 ```typescript
-socket.emit('game:join', { roomId: string })
+socket.emit('game:join', { roomId: string });
 ```
 
 #### Player Action
+
 ```typescript
 socket.emit('game:action', {
   type: 'move' | 'jump' | 'attack',
-  data: { x: number, y: number }
-})
+  data: { x: number, y: number },
+});
 ```
 
 #### Use Power-up
+
 ```typescript
-socket.emit('game:powerup', { powerupId: string })
+socket.emit('game:powerup', { powerupId: string });
 ```
 
 ### Server → Client
 
 #### Game State Update
+
 ```typescript
 socket.on('game:state', (state: GameState) => {
   // Handle game state
-})
+});
 ```
 
 #### Player Joined
+
 ```typescript
 socket.on('game:player-joined', (player: Player) => {
   // Handle new player
-})
+});
 ```
 
 #### Player Left
+
 ```typescript
 socket.on('game:player-left', (playerId: string) => {
   // Handle player disconnect
-})
+});
 ```
 
 #### Score Update
+
 ```typescript
-socket.on('game:score', (data: { playerId: string, score: number }) => {
+socket.on('game:score', (data: { playerId: string; score: number }) => {
   // Handle score update
-})
+});
 ```
 
 ---
@@ -218,6 +245,7 @@ All endpoints return standard HTTP status codes:
 - `500 Internal Server Error` - Server error
 
 **Error Response Format:**
+
 ```json
 {
   "error": "string",
@@ -231,10 +259,12 @@ All endpoints return standard HTTP status codes:
 ## Rate Limiting
 
 API endpoints are rate limited:
+
 - **Authenticated:** 100 requests/minute
 - **Unauthenticated:** 20 requests/minute
 
 Rate limit headers are included in responses:
+
 ```
 X-RateLimit-Limit: 100
 X-RateLimit-Remaining: 95

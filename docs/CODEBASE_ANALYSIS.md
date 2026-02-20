@@ -41,7 +41,7 @@ This report provides a comprehensive analysis of the Phaser Platformer codebase,
 
 ```typescript
 // Current code (lines 460-485):
-this.events.on("enemy:projectile-fired", (data) => {
+this.events.on('enemy:projectile-fired', (data) => {
   this.projectiles.push(data.projectile);
   // ...
 });
@@ -101,11 +101,11 @@ public async initializePlayer(socket: Socket, token?: string): Promise<Player> {
 
 ```typescript
 // Current:
-this.audioService?.playSFX("game_start"); // Better, but still risky
+this.audioService?.playSFX('game_start'); // Better, but still risky
 
 // Should be:
 if (this.audioService) {
-  this.audioService.playSFX("game_start");
+  this.audioService.playSFX('game_start');
 }
 ```
 
@@ -276,9 +276,9 @@ getNearbyObjects(x: number, y: number, radius: number): GameObject[] {
 ```typescript
 export const AppDataSource = new DataSource({
   // ...
-  synchronize: process.env.NODE_ENV === "development",
+  synchronize: process.env.NODE_ENV === 'development',
   migrations:
-    process.env.NODE_ENV === "production" ? ["./migrations/*.ts"] : [],
+    process.env.NODE_ENV === 'production' ? ['./migrations/*.ts'] : [],
 });
 ```
 
@@ -497,11 +497,11 @@ private updateUI(): void { }
 
 ```typescript
 // Before:
-console.log("Game started");
+console.log('Game started');
 
 // After:
-import { logger } from "../utils/logger";
-logger.info("Game started");
+import { logger } from '../utils/logger';
+logger.info('Game started');
 ```
 
 ### 8.3 Add Strict Null Checks

@@ -13,22 +13,27 @@ Welcome to the Phaser Platformer! This guide will help you get started with the 
 ## Gameplay Basics
 
 ### Objective
+
 Navigate through levels, defeat enemies, collect items, and reach the goal flag.
 
 ### Health & Lives
+
 Your character has a health bar. Taking damage reduces health; when it reaches zero, you lose a life. You start with three lives.
 
 ### Items
+
 - **Coins**: Collect for points.
 - **Power‑ups**: Grant temporary abilities (speed, invincibility, double jump).
 - **Keys**: Unlock doors.
 
 ### Enemies
+
 Avoid or defeat enemies by jumping on them or using attacks.
 
 ## Multiplayer
 
 The game supports real‑time multiplayer via Socket.IO. You can:
+
 - Join public rooms.
 - Create private rooms with friends.
 - Compete on leaderboards.
@@ -43,6 +48,7 @@ The game supports real‑time multiplayer via Socket.IO. You can:
 ## Troubleshooting
 
 If you experience connection issues:
+
 - Ensure your internet is stable.
 - Check that the game server is online.
 - Refresh the page and try again.

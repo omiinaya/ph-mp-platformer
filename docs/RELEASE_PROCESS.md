@@ -21,6 +21,7 @@ MAJOR.MINOR.PATCH
 - **rc**: Release candidate (feature complete, final testing)
 
 Examples:
+
 - `1.0.0-alpha.1`
 - `1.0.0-beta.3`
 - `1.0.0-rc.1`
@@ -28,21 +29,25 @@ Examples:
 ## Release Branches
 
 ### Main Branch
+
 - Always production-ready
 - All tests must pass
 - Protected branch
 
 ### Develop Branch
+
 - Integration branch for next release
 - Contains work-in-progress features
 
 ### Release Branches
+
 - Format: `release/x.y.z`
 - Created from develop when ready for release
 - Only bug fixes allowed
 - Merged to main and develop
 
 ### Hotfix Branches
+
 - Format: `hotfix/description`
 - For urgent production fixes
 - Created from main
@@ -74,6 +79,7 @@ git push && git push --tags
 ### 3. CI/CD Pipeline
 
 On tag push, the CI pipeline:
+
 1. Runs all tests
 2. Builds artifacts
 3. Creates GitHub release
@@ -85,6 +91,7 @@ On tag push, the CI pipeline:
 ### Dependabot
 
 We use Dependabot for dependency updates:
+
 - Creates PRs for outdated dependencies
 - Auto-merges non-breaking security updates
 - Requires manual review for major updates
@@ -105,12 +112,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Build
         run: |
           npm ci
           npm run build
-      
+
       - name: Create Release
         uses: actions/create-release@v1
         env:
@@ -124,11 +131,11 @@ jobs:
 
 ## Environment Configs
 
-| Environment | URL | Branch | Config |
-|-------------|-----|--------|--------|
-| Development | localhost | feature/* | .env |
-| Staging | staging.example.com | develop | staging.env |
-| Production | game.example.com | main | production.env |
+| Environment | URL                 | Branch     | Config         |
+| ----------- | ------------------- | ---------- | -------------- |
+| Development | localhost           | feature/\* | .env           |
+| Staging     | staging.example.com | develop    | staging.env    |
+| Production  | game.example.com    | main       | production.env |
 
 ## Deployment
 
@@ -202,4 +209,4 @@ psql -c "BEGIN; ROLLBACK;"
 
 ---
 
-*Last updated: 2026-02-17*
+_Last updated: 2026-02-17_

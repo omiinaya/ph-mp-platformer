@@ -37,18 +37,21 @@ graph TB
 ## Module Breakdown
 
 ### 1. Core Engine (Phaser 3)
+
 - **Game Bootstrapper**: Initializes Phaser game config, sets up renderer, physics, and scene manager.
 - **Scene Manager**: Manages game scenes (Boot, Preload, MainMenu, Game, Pause, GameOver).
 - **Asset Loader**: Loads images, spritesheets, audio, and other resources.
 - **Physics Engine**: Arcade physics for collision detection and movement.
 
 ### 2. Game Objects Module
+
 - **Entity Factory**: Creates instances of characters, items, platforms, enemies.
 - **Sprite Manager**: Handles sprite animations, transformations, and rendering.
 - **Collision System**: Detects and resolves collisions between entities.
 - **Camera Controller**: Follows player, manages viewport, and parallax effects.
 
 ### 3. Scenes Module
+
 - **Boot Scene**: Initializes core systems and loads configuration.
 - **Preload Scene**: Preloads assets with progress bar.
 - **MainMenu Scene**: Provides menu UI, settings, and start game.
@@ -57,23 +60,27 @@ graph TB
 - **GameOver Scene**: Shows results, stats, and retry options.
 
 ### 4. Services Module
+
 - **Network Service**: Manages Socket.IO connections, sends/receives game state updates.
 - **Audio Service**: Controls background music and sound effects.
 - **Local Storage Service**: Saves local preferences and cached data.
 - **Analytics Service**: Tracks gameplay metrics (optional).
 
 ### 5. Multiplayer Module
+
 - **Connection Manager**: Establishes and maintains WebSocket connection.
 - **State Synchronizer**: Synchronizes game state between clients and server.
 - **Lag Compensation**: Predicts movement and reconciles with server authority.
 - **Room Management**: Joins/leaves rooms, handles matchmaking.
 
 ### 6. Persistence Module
+
 - **Player Profile Service**: Retrieves and updates player profile (level, unlocks, stats).
 - **Game Data Service**: Fetches level definitions, item definitions, skill trees.
 - **Leaderboard Service**: Updates and retrieves leaderboard rankings.
 
 ### 7. Utilities Module
+
 - **Math Utilities**: Vector operations, random number generation, easing functions.
 - **Debug Utilities**: Logging, performance profiling, cheat codes.
 - **Config Loader**: Loads game configuration from JSON files.
@@ -178,6 +185,7 @@ classDiagram
 ## Data Flow for Online Multiplayer
 
 ### Client-Server Communication
+
 1. **Connection Establishment**:
    - Client connects to server via WebSocket (Socket.IO).
    - Server authenticates using JWT token (if logged in) or assigns a guest session.
@@ -208,6 +216,7 @@ classDiagram
    - If all players leave, room is cleaned up.
 
 ### Data Flow Diagram
+
 ```mermaid
 sequenceDiagram
     participant ClientA
@@ -234,6 +243,7 @@ sequenceDiagram
 ```
 
 ### State Synchronization Strategy
+
 - **Snapshot Interpolation**: Server sends full snapshots; clients interpolate between them.
 - **Delta Compression**: Only changed entities are sent.
 - **Priority System**: Nearby entities have higher update frequency.
@@ -242,7 +252,9 @@ sequenceDiagram
 ## Persistence Layer Design
 
 ### Database Schema (PostgreSQL)
+
 **Players Table**
+
 ```sql
 CREATE TABLE players (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -260,6 +272,7 @@ CREATE TABLE players (
 ```
 
 **Player Sessions Table**
+
 ```sql
 CREATE TABLE player_sessions (
     session_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -271,6 +284,7 @@ CREATE TABLE player_sessions (
 ```
 
 **Leaderboard Table**
+
 ```sql
 CREATE TABLE leaderboard (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -282,28 +296,33 @@ CREATE TABLE leaderboard (
 ```
 
 **Game Data Tables**
+
 - **levels**: Level definitions (tilemaps, enemy placements, rewards)
 - **items**: Item definitions (stats, effects, unlock requirements)
 - **skills**: Skill definitions (cooldown, mana cost, damage)
 - **achievements**: Achievement definitions and progress
 
 ### Caching Strategy (Redis)
+
 - **Player Profiles**: Cache frequently accessed player data (TTL: 5 minutes)
 - **Leaderboard Top 100**: Cache sorted sets for quick retrieval
 - **Matchmaking Queue**: Store pending matchmaking requests
 - **Room State**: Temporary room data (expires when room ends)
 
 ### Data Access Layer
+
 - **Repository Pattern**: Each entity has a repository (PlayerRepository, LeaderboardRepository, etc.)
 - **Data Mappers**: Convert between database rows and domain objects.
 - **Unit of Work**: Manage transactions across multiple operations.
 
 ### Progression System
+
 - **Experience & Leveling**: XP gained from completing levels, defeating enemies.
 - **Unlockables**: Items, skills, and cosmetics unlocked based on level/achievements.
 - **Daily Quests**: Persistent quests reset daily, stored in player's progress.
 
 ### Backup & Recovery
+
 - **Regular Backups**: Automated daily backups of PostgreSQL.
 - **Point-in-Time Recovery**: WAL archiving enabled.
 - **Data Export**: JSON export for player migration.
@@ -311,6 +330,7 @@ CREATE TABLE leaderboard (
 ## Performance Considerations
 
 ### Asset Loading & Management
+
 - **Texture Atlases**: Combine multiple sprites into a single texture to reduce draw calls.
 - **Lazy Loading**: Load assets on-demand per scene, unload unused assets.
 - **Preloading**: Critical assets (player sprites, UI) preloaded in Boot scene.
@@ -318,6 +338,7 @@ CREATE TABLE leaderboard (
 - **CDN**: Serve static assets via CDN with caching headers.
 
 ### Rendering Optimizations
+
 - **Sprite Batching**: Use Phaser's `StaticGroup` for static objects.
 - **Culling**: Only render entities within camera viewport.
 - **Particle Limits**: Cap particle effects to prevent frame drops.
@@ -325,6 +346,7 @@ CREATE TABLE leaderboard (
 - **Frame Rate Cap**: Limit to 60 FPS to reduce CPU/GPU usage.
 
 ### Network Performance
+
 - **Message Compression**: Use Protocol Buffers or MessagePack for binary serialization.
 - **Bandwidth Throttling**: Limit update frequency based on connection quality.
 - **Client-Side Prediction**: Reduce perceived latency by predicting movement.
@@ -332,6 +354,7 @@ CREATE TABLE leaderboard (
 - **Lag Compensation**: Server-side rewind for hit detection.
 
 ### Server-Side Optimizations
+
 - **Scalability**: Use Node.js cluster mode with Socket.IO adapter for multi-core.
 - **Load Balancing**: Distribute rooms across multiple server instances.
 - **Database Connection Pooling**: Use PgBouncer for PostgreSQL connection pooling.
@@ -339,16 +362,19 @@ CREATE TABLE leaderboard (
 - **Rate Limiting**: Prevent abuse by limiting client messages per second.
 
 ### Memory Management
+
 - **Object Pooling**: Reuse game objects (bullets, particles) instead of creating/destroying.
 - **Garbage Collection**: Minimize allocations in game loop to avoid GC pauses.
 - **Leak Detection**: Monitor memory usage in production.
 
 ### Latency Mitigation
+
 - **Region-Based Matchmaking**: Match players in same geographic region.
 - **Ping-Based Routing**: Use lowest-latency server.
 - **Client-Side Smoothing**: Interpolate positions over time.
 
 ### Monitoring & Profiling
+
 - **Real‑Time Metrics**: Monitor FPS, latency, packet loss, memory usage.
 - **Alerting**: Set up alerts for performance degradation.
 - **A/B Testing**: Test performance impact of new features.
@@ -462,6 +488,7 @@ phaser-platformer/
 ```
 
 **Key Points:**
+
 - **Monorepo** structure using npm/yarn workspaces for client, server, shared.
 - **TypeScript** across both client and server for type safety.
 - **Separation of concerns** with clear module boundaries.

@@ -174,7 +174,7 @@ private authenticateToken(token: string): string | null {
 **File:** `server/src/network/middleware/authMiddleware.ts:23`
 
 ```typescript
-const secret = process.env.JWT_SECRET || "default_secret"; // HARDCODED FALLBACK
+const secret = process.env.JWT_SECRET || 'default_secret'; // HARDCODED FALLBACK
 ```
 
 ---

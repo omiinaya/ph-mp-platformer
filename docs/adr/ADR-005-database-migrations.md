@@ -93,6 +93,7 @@ export class AddPlayers1708200000 {
 ### Option 2: Data Backup
 
 Before risky migrations:
+
 1. Backup data
 2. Run migration
 3. Verify
@@ -123,4 +124,4 @@ export class SeedInitialData1708200000 {
 
 ---
 
-*Date: 2026-02-17*
+_Date: 2026-02-17_

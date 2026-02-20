@@ -8,11 +8,11 @@ Rate limiting protects the API from abuse and ensures fair usage across all clie
 
 ## Limits
 
-| Endpoint | Limit | Window |
-|----------|-------|--------|
-| `/api/auth/*` | 10 requests | 1 minute |
-| `/api/players/*` | 60 requests | 1 minute |
-| `/api/game/*` | 120 requests | 1 minute |
+| Endpoint             | Limit         | Window   |
+| -------------------- | ------------- | -------- |
+| `/api/auth/*`        | 10 requests   | 1 minute |
+| `/api/players/*`     | 60 requests   | 1 minute |
+| `/api/game/*`        | 120 requests  | 1 minute |
 | WebSocket connection | 5 connections | 1 minute |
 
 ## Implementation
@@ -25,7 +25,7 @@ import rateLimit from 'express-rate-limit';
 const authLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 10, // 10 requests
-  message: { error: 'Too many auth attempts, please try again later' }
+  message: { error: 'Too many auth attempts, please try again later' },
 });
 
 app.use('/api/auth', authLimiter);
@@ -37,7 +37,7 @@ app.use('/api/auth', authLimiter);
 io.use((socket, next) => {
   const ip = socket.handshake.address;
   const requests = getRateLimitCount(ip);
-  
+
   if (requests > 5) {
     return next(new Error('Too many connections'));
   }
@@ -61,18 +61,18 @@ Retry-After: 60
 ```typescript
 async function apiCall(url: string, options: RequestInit) {
   const response = await fetch(url, options);
-  
+
   if (response.status === 429) {
     const retryAfter = response.headers.get('Retry-After');
     const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 60000;
-    
+
     console.log(`Rate limited. Waiting ${waitTime}ms`);
     await sleep(waitTime);
-    
+
     // Retry the request
     return apiCall(url, options);
   }
-  
+
   return response;
 }
 ```
@@ -98,4 +98,4 @@ Track rate limiting metrics:
 
 ---
 
-*Last updated: 2026-02-17*
+_Last updated: 2026-02-17_

@@ -93,8 +93,8 @@ I have performed a comprehensive analysis of the Phaser Platformer codebase and 
 
    ```typescript
    // Add to GameScene.destroy()
-   this.events.off("enemy:projectile-fired");
-   this.events.off("checkpoint:reached");
+   this.events.off('enemy:projectile-fired');
+   this.events.off('checkpoint:reached');
    // ... remove all listeners
    ```
 
@@ -102,7 +102,7 @@ I have performed a comprehensive analysis of the Phaser Platformer codebase and 
 
    ```typescript
    // database.ts
-   synchronize: process.env.NODE_ENV === "development";
+   synchronize: process.env.NODE_ENV === 'development';
    ```
 
 3. **Implement JWT**
