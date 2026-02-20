@@ -116,4 +116,51 @@ describe('httpRateLimit', () => {
       }).not.toThrow();
     });
   });
+
+  describe('rate limit window reset', () => {
+    it('should reset bucket when window expires', () => {
+      const middleware = httpRateLimit(2, 100); // 100ms window
+
+      // First two requests should pass
+      middleware(mockReq as Request, mockRes as Response, nextFn);
+      middleware(mockReq as Request, mockRes as Response, nextFn);
+
+      // Third should be blocked
+      middleware(mockReq as Request, mockRes as Response, nextFn);
+      expect(mockRes.status).toHaveBeenCalledWith(429);
+
+      // Wait for window to expire and reset
+      return new Promise<void>(resolve => {
+        setTimeout(() => {
+          const nextFn2 = jest.fn();
+          const mockRes2 = {
+            status: jest.fn().mockReturnThis(),
+            json: jest.fn().mockReturnThis(),
+            setHeader: jest.fn().mockReturnThis(),
+          };
+
+          middleware(mockReq as Request, mockRes2 as unknown as Response, nextFn2);
+          expect(nextFn2).toHaveBeenCalled();
+          resolve();
+        }, 150);
+      });
+    });
+  });
+
+  describe('different IPs have separate buckets', () => {
+    it('should track rate limits separately per IP', () => {
+      const middleware = httpRateLimit(2, 60000);
+
+      // First IP
+      Object.defineProperty(mockReq, 'ip', { value: '192.168.1.1', writable: true, configurable: true });
+      middleware(mockReq as Request, mockRes as Response, nextFn);
+      middleware(mockReq as Request, mockRes as Response, nextFn);
+
+      // Second IP should have its own bucket
+      Object.defineProperty(mockReq, 'ip', { value: '192.168.1.2', writable: true, configurable: true });
+      const nextFn2 = jest.fn();
+      middleware(mockReq as Request, mockRes as Response, nextFn2);
+      expect(nextFn2).toHaveBeenCalled();
+    });
+  });
 });

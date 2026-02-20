@@ -232,4 +232,209 @@ describe('ConnectionManager', () => {
       expect(connectionManager.getConnectedCount()).toBe(0);
     });
   });
+
+  describe('authenticateToken', () => {
+    beforeEach(() => {
+      connectionManager = new ConnectionManager(mockServer);
+    });
+
+    it('should return null when JWT_SECRET is not set', () => {
+      mockSocket.handshake.auth = { token: 'some-token' };
+      const connectionHandler = eventHandlers.get('connection')!;
+      connectionHandler(mockSocket);
+
+      // Should have assigned guest session since auth failed
+      const session = connectionManager.getSession('socket-123');
+      expect(session?.playerId).toBe('guest_socket-123');
+      expect(logger.error).toHaveBeenCalledWith('JWT_SECRET environment variable not set');
+    });
+
+    it('should return null for invalid token', () => {
+      process.env.JWT_SECRET = 'test-secret';
+      mockSocket.handshake.auth = { token: 'invalid-token' };
+      (jwt.verify as jest.Mock).mockImplementation(() => {
+        throw new Error('Invalid token');
+      });
+
+      const connectionHandler = eventHandlers.get('connection')!;
+      connectionHandler(mockSocket);
+
+      // Should have assigned guest session since auth failed
+      const session = connectionManager.getSession('socket-123');
+      expect(session?.playerId).toBe('guest_socket-123');
+      expect(logger.warn).toHaveBeenCalledWith('Invalid token: Invalid token');
+    });
+
+    it('should read token from query when not in auth', () => {
+      const mockPlayerId = 'player-from-query';
+      process.env.JWT_SECRET = 'test-secret';
+      mockSocket.handshake.auth = {};
+      mockSocket.handshake.query = { token: 'query-token' };
+      (jwt.verify as jest.Mock).mockReturnValue({ playerId: mockPlayerId });
+
+      const connectionHandler = eventHandlers.get('connection')!;
+      connectionHandler(mockSocket);
+
+      expect(jwt.verify).toHaveBeenCalledWith('query-token', 'test-secret');
+      expect(mockSocket.emit).toHaveBeenCalledWith('connection_ack', {
+        sessionId: 'socket-123',
+        playerId: mockPlayerId,
+        serverTime: expect.any(Number),
+      });
+    });
+  });
+
+  describe('handleReconnectAttempt', () => {
+    beforeEach(() => {
+      connectionManager = new ConnectionManager(mockServer);
+    });
+
+    it('should handle reconnect_attempt event', () => {
+      mockSocket.handshake.auth = {};
+      mockSocket.handshake.query = {};
+      const connectionHandler = eventHandlers.get('connection')!;
+      connectionHandler(mockSocket);
+
+      const reconnectHandler = eventHandlers.get('socket-123:reconnect_attempt')!;
+      reconnectHandler();
+
+      expect(logger.debug).toHaveBeenCalledWith('Reconnect attempt by socket-123');
+    });
+  });
+
+  describe('handlePing', () => {
+    beforeEach(() => {
+      connectionManager = new ConnectionManager(mockServer);
+    });
+
+    it('should respond with pong and update lastActivity', () => {
+      mockSocket.handshake.auth = {};
+      mockSocket.handshake.query = {};
+      const connectionHandler = eventHandlers.get('connection')!;
+      connectionHandler(mockSocket);
+
+      const pingHandler = eventHandlers.get('socket-123:ping')!;
+      pingHandler();
+
+      expect(mockSocket.emit).toHaveBeenCalledWith('pong', {
+        serverTime: expect.any(Number),
+      });
+    });
+
+    it('should not emit pong for unknown session', () => {
+      mockSocket.handshake.auth = {};
+      mockSocket.handshake.query = {};
+      const connectionHandler = eventHandlers.get('connection')!;
+      connectionHandler(mockSocket);
+
+      // Delete the session manually
+      const disconnectHandler = eventHandlers.get('socket-123:disconnect')!;
+      disconnectHandler();
+
+      // Clear mock calls
+      (mockSocket.emit as jest.Mock).mockClear();
+
+      const pingHandler = eventHandlers.get('socket-123:ping')!;
+      pingHandler();
+
+      // Should not have emitted pong since session doesn't exist
+      expect(mockSocket.emit).not.toHaveBeenCalledWith('pong', expect.any(Object));
+    });
+  });
+
+  describe('getSessionByPlayerId', () => {
+    beforeEach(() => {
+      connectionManager = new ConnectionManager(mockServer);
+    });
+
+    it('should return session by player ID', () => {
+      mockSocket.handshake.auth = {};
+      mockSocket.handshake.query = {};
+      const connectionHandler = eventHandlers.get('connection')!;
+      connectionHandler(mockSocket);
+
+      const session = connectionManager.getSessionByPlayerId('guest_socket-123');
+      expect(session).toBeDefined();
+      expect(session?.playerId).toBe('guest_socket-123');
+    });
+
+    it('should return undefined for unknown player ID', () => {
+      const session = connectionManager.getSessionByPlayerId('unknown-player');
+      expect(session).toBeUndefined();
+    });
+  });
+
+  describe('assignRoom and removeRoomAssignment', () => {
+    beforeEach(() => {
+      connectionManager = new ConnectionManager(mockServer);
+    });
+
+    it('should assign room to session', () => {
+      mockSocket.handshake.auth = {};
+      mockSocket.handshake.query = {};
+      const connectionHandler = eventHandlers.get('connection')!;
+      connectionHandler(mockSocket);
+
+      connectionManager.assignRoom('socket-123', 'room-1');
+      const session = connectionManager.getSession('socket-123');
+      expect(session?.roomId).toBe('room-1');
+    });
+
+    it('should not throw when assigning room to unknown socket', () => {
+      expect(() => {
+        connectionManager.assignRoom('unknown-socket', 'room-1');
+      }).not.toThrow();
+    });
+
+    it('should remove room assignment', () => {
+      mockSocket.handshake.auth = {};
+      mockSocket.handshake.query = {};
+      const connectionHandler = eventHandlers.get('connection')!;
+      connectionHandler(mockSocket);
+
+      connectionManager.assignRoom('socket-123', 'room-1');
+      connectionManager.removeRoomAssignment('socket-123');
+
+      const session = connectionManager.getSession('socket-123');
+      expect(session?.roomId).toBeNull();
+    });
+
+    it('should not throw when removing room for unknown socket', () => {
+      expect(() => {
+        connectionManager.removeRoomAssignment('unknown-socket');
+      }).not.toThrow();
+    });
+  });
+
+  describe('with ProgressionService', () => {
+    it('should initialize player progression for authenticated player', async () => {
+      const mockPlayerId = 'player-456';
+      process.env.JWT_SECRET = 'test-secret';
+      mockSocket.handshake.auth = { token: 'valid-token' };
+      (jwt.verify as jest.Mock).mockReturnValue({ playerId: mockPlayerId });
+
+      connectionManager = new ConnectionManager(mockServer, mockProgressionService);
+      const connectionHandler = eventHandlers.get('connection')!;
+      connectionHandler(mockSocket);
+
+      // Wait for async progression service call
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      expect(mockProgressionService.initializePlayer).toHaveBeenCalledWith(mockPlayerId);
+    });
+
+    it('should not initialize progression for guest players', async () => {
+      mockSocket.handshake.auth = {};
+      mockSocket.handshake.query = {};
+
+      connectionManager = new ConnectionManager(mockServer, mockProgressionService);
+      const connectionHandler = eventHandlers.get('connection')!;
+      connectionHandler(mockSocket);
+
+      // Wait for async progression service call
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      expect(mockProgressionService.initializePlayer).not.toHaveBeenCalled();
+    });
+  });
 });
