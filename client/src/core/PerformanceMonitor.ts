@@ -240,7 +240,7 @@ export class PerformanceMonitor {
     p50: number;
     p95: number;
     p99: number;
-  } {
+    } {
     const samples = this.getFrameSamples();
     if (samples.length === 0) {
       return { average: 0, min: 0, max: 0, p50: 0, p95: 0, p99: 0 };
@@ -361,7 +361,7 @@ export class PerformanceProfiler {
   public static getAllProfiles(): Map<
     string,
     { totalTime: number; averageTime: number; callCount: number }
-  > {
+    > {
     if (!this.enabled) return new Map();
 
     const result = new Map();

@@ -141,53 +141,53 @@ export class GameSync {
    */
   private processGameEvent(state: GameStateSnapshot, event: any): void {
     switch (event.type) {
-      case 'player_input': {
-        const entity = state.entities[event.playerId];
-        if (entity) {
-          // Apply player movement
-          if (event.input.moveX !== undefined) {
-            entity.velocity = entity.velocity || { x: 0, y: 0 };
-            entity.velocity.x = event.input.moveX * 200; // movement speed
-          }
-          if (event.input.jump && entity.isOnGround) {
-            entity.velocity = entity.velocity || { x: 0, y: 0 };
-            entity.velocity.y = -400; // jump force
-            entity.isOnGround = false;
+    case 'player_input': {
+      const entity = state.entities[event.playerId];
+      if (entity) {
+        // Apply player movement
+        if (event.input.moveX !== undefined) {
+          entity.velocity = entity.velocity || { x: 0, y: 0 };
+          entity.velocity.x = event.input.moveX * 200; // movement speed
+        }
+        if (event.input.jump && entity.isOnGround) {
+          entity.velocity = entity.velocity || { x: 0, y: 0 };
+          entity.velocity.y = -400; // jump force
+          entity.isOnGround = false;
+        }
+      }
+      break;
+    }
+
+    case 'collision': {
+      // Handle collision between entities
+      const entity1 = state.entities[event.entityId1];
+      const entity2 = state.entities[event.entityId2];
+      if (entity1 && entity2) {
+        // Apply collision response
+        if (event.damage) {
+          entity2.health = (entity2.health || 100) - event.damage;
+          if (entity2.health <= 0) {
+            state.events.push({
+              type: 'entity_destroyed',
+              entityId: event.entityId2,
+              reason: 'destroyed',
+              timestamp: Date.now(),
+            });
           }
         }
-        break;
       }
+      break;
+    }
 
-      case 'collision': {
-        // Handle collision between entities
-        const entity1 = state.entities[event.entityId1];
-        const entity2 = state.entities[event.entityId2];
-        if (entity1 && entity2) {
-          // Apply collision response
-          if (event.damage) {
-            entity2.health = (entity2.health || 100) - event.damage;
-            if (entity2.health <= 0) {
-              state.events.push({
-                type: 'entity_destroyed',
-                entityId: event.entityId2,
-                reason: 'destroyed',
-                timestamp: Date.now(),
-              });
-            }
-          }
-        }
-        break;
-      }
+    case 'entity_destroyed': {
+      // Entity was destroyed, remove from state
+      delete state.entities[event.entityId];
+      break;
+    }
 
-      case 'entity_destroyed': {
-        // Entity was destroyed, remove from state
-        delete state.entities[event.entityId];
-        break;
-      }
-
-      default:
-        // Unknown event type, log for debugging
-        logger.debug(`Unknown game event type: ${event.type}`);
+    default:
+      // Unknown event type, log for debugging
+      logger.debug(`Unknown game event type: ${event.type}`);
     }
   }
 

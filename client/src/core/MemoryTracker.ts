@@ -94,7 +94,7 @@ export class MemoryTracker {
     byType: Map<string, number>;
     withParent: number;
     withoutParent: number;
-  } {
+    } {
     const stats = {
       totalTracked: this.trackedObjects.size,
       byType: new Map<string, number>(),

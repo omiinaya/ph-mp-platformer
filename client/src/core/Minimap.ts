@@ -158,12 +158,12 @@ export class Minimap {
     const screenWidth = this.scene.cameras.main.width;
 
     switch (position) {
-      case 'top-left':
-      case 'bottom-left':
-        return margin;
-      case 'top-right':
-      case 'bottom-right':
-        return screenWidth - width - margin;
+    case 'top-left':
+    case 'bottom-left':
+      return margin;
+    case 'top-right':
+    case 'bottom-right':
+      return screenWidth - width - margin;
     }
   }
 
@@ -175,12 +175,12 @@ export class Minimap {
     const screenHeight = this.scene.cameras.main.height;
 
     switch (position) {
-      case 'top-left':
-      case 'top-right':
-        return margin;
-      case 'bottom-left':
-      case 'bottom-right':
-        return screenHeight - height - margin;
+    case 'top-left':
+    case 'top-right':
+      return margin;
+    case 'bottom-left':
+    case 'bottom-right':
+      return screenHeight - height - margin;
     }
   }
 
@@ -303,23 +303,23 @@ export class Minimap {
     let alpha = 0.7;
 
     switch (type) {
-      case MarkerType.PLAYER:
-        color = 0x00ff00;
-        alpha = 1;
-        break;
-      case MarkerType.ENEMY:
-        color = 0xff0000;
-        break;
-      case MarkerType.ITEM:
-        color = 0xffff00;
-        break;
-      case MarkerType.EXIT:
-        color = 0x00ffff;
-        alpha = 0.9;
-        break;
-      case MarkerType.CHECKPOINT:
-        color = 0xff8800;
-        break;
+    case MarkerType.PLAYER:
+      color = 0x00ff00;
+      alpha = 1;
+      break;
+    case MarkerType.ENEMY:
+      color = 0xff0000;
+      break;
+    case MarkerType.ITEM:
+      color = 0xffff00;
+      break;
+    case MarkerType.EXIT:
+      color = 0x00ffff;
+      alpha = 0.9;
+      break;
+    case MarkerType.CHECKPOINT:
+      color = 0xff8800;
+      break;
     }
 
     this.markersGraphics.fillStyle(color, alpha);

@@ -150,37 +150,37 @@ export class PowerUp extends GameObject {
     });
 
     switch (this.powerUpType) {
-      case 'double_jump':
-        this.scene.tweens.add({
-          targets: this,
-          scaleX: 1.2,
-          scaleY: 0.8,
-          duration: 400,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
-        });
-        break;
-      case 'shield':
-        this.scene.tweens.add({
-          targets: this,
-          alpha: 0.6,
-          duration: 500,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
-        });
-        break;
-      case 'speed_boost':
-        this.scene.tweens.add({
-          targets: this,
-          scaleX: 1.3,
-          duration: 300,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
-        });
-        break;
+    case 'double_jump':
+      this.scene.tweens.add({
+        targets: this,
+        scaleX: 1.2,
+        scaleY: 0.8,
+        duration: 400,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+      break;
+    case 'shield':
+      this.scene.tweens.add({
+        targets: this,
+        alpha: 0.6,
+        duration: 500,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+      break;
+    case 'speed_boost':
+      this.scene.tweens.add({
+        targets: this,
+        scaleX: 1.3,
+        duration: 300,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+      break;
     }
   }
 
