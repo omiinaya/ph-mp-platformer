@@ -33,7 +33,8 @@ function checkStatus() {
   const tests = exec('npm run test 2>&1', { timeout: 120000 });
 
   const lintPass = lint.success;
-  const testPass = tests.success && !tests.output.includes('failed');
+  // Only rely on exit code; avoid false positives from unrelated "failed" strings (e.g., worker warnings)
+  const testPass = tests.success;
   const testCount = tests.output.match(/Tests:\s+(\d+)\s+passed/)?.[1] || '?';
 
   return {
