@@ -117,11 +117,11 @@ export class GameScene extends Scene {
     dirty: boolean;
     lastUpdate: number;
   } = {
-      enemies: [],
-      items: [],
-      dirty: true,
-      lastUpdate: 0,
-    };
+    enemies: [],
+    items: [],
+    dirty: true,
+    lastUpdate: 0,
+  };
 
   constructor() {
     super({ key: 'GameScene' });
@@ -1158,14 +1158,14 @@ export class GameScene extends Scene {
   } {
     // Define level dimensions based on level number
     switch (levelNumber) {
-    case 1:
-      return { width: 2000, height: 600 };
-    case 2:
-      return { width: 1280, height: 2560 };
-    case 3:
-      return { width: 3000, height: 800 };
-    default:
-      return { width: 2000, height: 600 };
+      case 1:
+        return { width: 2000, height: 600 };
+      case 2:
+        return { width: 1280, height: 2560 };
+      case 3:
+        return { width: 3000, height: 800 };
+      default:
+        return { width: 2000, height: 600 };
     }
   }
 

@@ -464,18 +464,18 @@ export class YellowGem extends Gem {
  */
 function getGemBaseValue(gemType: GemType): number {
   switch (gemType) {
-  case 'red':
-    return 50;
-  case 'blue':
-    return 100;
-  case 'green':
-    return 200;
-  case 'purple':
-    return 500;
-  case 'yellow':
-    return 1000;
-  default:
-    return 50;
+    case 'red':
+      return 50;
+    case 'blue':
+      return 100;
+    case 'green':
+      return 200;
+    case 'purple':
+      return 500;
+    case 'yellow':
+      return 1000;
+    default:
+      return 50;
   }
 }
 
@@ -484,17 +484,17 @@ function getGemBaseValue(gemType: GemType): number {
  */
 function getGemRarity(gemType: GemType): number {
   switch (gemType) {
-  case 'red':
-    return 0;
-  case 'blue':
-    return 1;
-  case 'green':
-    return 2;
-  case 'purple':
-    return 3;
-  case 'yellow':
-    return 4;
-  default:
-    return 0;
+    case 'red':
+      return 0;
+    case 'blue':
+      return 1;
+    case 'green':
+      return 2;
+    case 'purple':
+      return 3;
+    case 'yellow':
+      return 4;
+    default:
+      return 0;
   }
 }

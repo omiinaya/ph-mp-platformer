@@ -16,19 +16,24 @@ docker-compose down
 ## Services
 
 ### Client (Game)
+
 - Port: 3000
 - Auto-reload on code changes
 
 ### Server
+
 - Port: 4000
 - WebSocket: 4001
 
 ### PostgreSQL
+
 - Port: 5432
 - Database: phaser_platformer
 
 ### Redis
+
 - Port: 6379
 
 ### Nginx (Reverse Proxy)
+
 - Port: 80, 443

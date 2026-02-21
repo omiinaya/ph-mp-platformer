@@ -1,5 +1,5 @@
 // Mock Phaser for testing
-const mockSprite = jest.fn().mockImplementation(function(this: any) {
+const mockSprite = jest.fn().mockImplementation(function () {
   this.x = 0;
   this.y = 0;
   this.texture = { key: 'default' };
@@ -46,13 +46,13 @@ class MockEventEmitter {
   }
   off(event, callback) {
     if (this._events[event]) {
-      this._events[event] = this._events[event].filter(cb => cb !== callback);
+      this._events[event] = this._events[event].filter((cb) => cb !== callback);
     }
     return this;
   }
   emit(event, ...args) {
     if (this._events[event]) {
-      this._events[event].forEach(cb => cb(...args));
+      this._events[event].forEach((cb) => cb(...args));
     }
     return this;
   }
@@ -76,7 +76,7 @@ class MockEventEmitter {
 class MockVector2 {
   x = 0;
   y = 0;
-  set(x: number, y: number) {
+  set(x, y) {
     this.x = x;
     this.y = y;
     return this;
@@ -129,9 +129,7 @@ const Phaser = {
       },
     },
     tweens: {
-      add: jest.fn().mockReturnValue({
-        destroy: jest.fn(),
-      }),
+      add: jest.fn().mockReturnValue({ destroy: jest.fn() }),
     },
     time: {
       delayedCall: jest.fn(),
@@ -144,12 +142,7 @@ const Phaser = {
     },
     cameras: {
       main: {
-        worldView: {
-          x: 0,
-          y: 0,
-          width: 800,
-          height: 600,
-        },
+        worldView: { x: 0, y: 0, width: 800, height: 600 },
       },
     },
   })),
@@ -172,8 +165,8 @@ const Phaser = {
   Math: {
     Vector2: MockVector2,
     Vector3: MockVector3,
-    DegToRad: jest.fn((deg: number) => deg * Math.PI / 180),
-    RadToDeg: jest.fn((rad: number) => rad * 180 / Math.PI),
+    DegToRad: jest.fn((deg) => (deg * Math.PI) / 180),
+    RadToDeg: jest.fn((rad) => (rad * 180) / Math.PI),
     Distance: {
       Between: jest.fn(),
     },

@@ -739,37 +739,37 @@ export class Player extends Character {
     let itemUsed = false;
 
     switch (slot.item.config.type) {
-    case 'consumable':
-      // Handle consumable items (health potions, etc.)
-      if (slot.item.config.value) {
-        if (slot.item.config.name.toLowerCase().includes('health')) {
-          const healAmount = Math.min(
-            slot.item.config.value,
-            this.maxHealth - this.health,
-          );
-          if (healAmount > 0) {
-            this.health = Math.min(this.maxHealth, this.health + healAmount);
-            this.scene.events.emit('player:healed', {
-              player: this,
-              amount: healAmount,
-            });
-            itemUsed = true;
+      case 'consumable':
+        // Handle consumable items (health potions, etc.)
+        if (slot.item.config.value) {
+          if (slot.item.config.name.toLowerCase().includes('health')) {
+            const healAmount = Math.min(
+              slot.item.config.value,
+              this.maxHealth - this.health,
+            );
+            if (healAmount > 0) {
+              this.health = Math.min(this.maxHealth, this.health + healAmount);
+              this.scene.events.emit('player:healed', {
+                player: this,
+                amount: healAmount,
+              });
+              itemUsed = true;
+            }
           }
         }
-      }
-      break;
+        break;
 
-    case 'powerup':
-      // Handle power-up items
-      this.scene.events.emit('player:powerup-used', {
-        player: this,
-        item: slot.item,
-      });
-      itemUsed = true;
-      break;
+      case 'powerup':
+        // Handle power-up items
+        this.scene.events.emit('player:powerup-used', {
+          player: this,
+          item: slot.item,
+        });
+        itemUsed = true;
+        break;
 
-    default:
-      break;
+      default:
+        break;
     }
 
     if (itemUsed) {
@@ -812,7 +812,7 @@ export class Player extends Character {
     health: number;
     maxHealth: number;
     inventory: any[];
-    } {
+  } {
     return {
       health: this.health,
       maxHealth: this.maxHealth,

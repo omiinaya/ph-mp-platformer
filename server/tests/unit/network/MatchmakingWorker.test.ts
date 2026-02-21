@@ -34,7 +34,10 @@ jest.mock('worker_threads', () => {
         const maxPlayers = baseRequest.preferences.maxPlayers || 4;
 
         // Take up to maxPlayers players, but ensure we have at least minPlayers
-        const takeCount = Math.max(minPlayers, Math.min(maxPlayers, group.length));
+        const takeCount = Math.max(
+          minPlayers,
+          Math.min(maxPlayers, group.length),
+        );
         if (takeCount >= minPlayers && group.length >= takeCount) {
           const matchedRequests = group.splice(0, takeCount);
           matches.push({ matchedRequests });

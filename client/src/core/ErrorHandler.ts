@@ -222,16 +222,16 @@ export class ErrorHandler {
    */
   private getSeverityColor(severity: ErrorSeverity): number {
     switch (severity) {
-    case ErrorSeverity.INFO:
-      return 0x3498db;
-    case ErrorSeverity.WARNING:
-      return 0xf1c40f;
-    case ErrorSeverity.ERROR:
-      return 0xe74c3c;
-    case ErrorSeverity.CRITICAL:
-      return 0x8e44ad;
-    default:
-      return 0x95a5a6;
+      case ErrorSeverity.INFO:
+        return 0x3498db;
+      case ErrorSeverity.WARNING:
+        return 0xf1c40f;
+      case ErrorSeverity.ERROR:
+        return 0xe74c3c;
+      case ErrorSeverity.CRITICAL:
+        return 0x8e44ad;
+      default:
+        return 0x95a5a6;
     }
   }
 
@@ -240,16 +240,16 @@ export class ErrorHandler {
    */
   private getSeverityTitle(severity: ErrorSeverity): string {
     switch (severity) {
-    case ErrorSeverity.INFO:
-      return 'Information';
-    case ErrorSeverity.WARNING:
-      return 'Warning';
-    case ErrorSeverity.ERROR:
-      return 'Error';
-    case ErrorSeverity.CRITICAL:
-      return 'Critical Error';
-    default:
-      return 'Error';
+      case ErrorSeverity.INFO:
+        return 'Information';
+      case ErrorSeverity.WARNING:
+        return 'Warning';
+      case ErrorSeverity.ERROR:
+        return 'Error';
+      case ErrorSeverity.CRITICAL:
+        return 'Critical Error';
+      default:
+        return 'Error';
     }
   }
 

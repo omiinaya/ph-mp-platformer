@@ -206,30 +206,30 @@ export class LazyAssetLoader {
       };
 
       switch (type) {
-      case 'image':
-        this.scene.load.image(key, path);
-        break;
-      case 'spritesheet':
-        this.scene.load.spritesheet(key, path, config);
-        break;
-      case 'audio':
-        const audioConfig = config || {};
-        this.scene.load.audio(key, path, audioConfig);
-        break;
-      case 'tilemap':
-        const tilemapConfig = config || {};
-        this.scene.load.tilemapTiledJSON(key, path, tilemapConfig);
-        break;
-      case 'svg':
-        const svgConfig = config || {};
-        this.scene.load.svg(key, path, svgConfig);
-        break;
-      case 'tilesetimage':
-        this.scene.load.image(key, path);
-        break;
-      default:
-        reject(new Error(`Unknown asset type: ${type}`));
-        return;
+        case 'image':
+          this.scene.load.image(key, path);
+          break;
+        case 'spritesheet':
+          this.scene.load.spritesheet(key, path, config);
+          break;
+        case 'audio':
+          const audioConfig = config || {};
+          this.scene.load.audio(key, path, audioConfig);
+          break;
+        case 'tilemap':
+          const tilemapConfig = config || {};
+          this.scene.load.tilemapTiledJSON(key, path, tilemapConfig);
+          break;
+        case 'svg':
+          const svgConfig = config || {};
+          this.scene.load.svg(key, path, svgConfig);
+          break;
+        case 'tilesetimage':
+          this.scene.load.image(key, path);
+          break;
+        default:
+          reject(new Error(`Unknown asset type: ${type}`));
+          return;
       }
 
       this.scene.load.once(`filecomplete-${type}-${key}`, onComplete);

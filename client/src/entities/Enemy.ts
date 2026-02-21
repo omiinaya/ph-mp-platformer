@@ -142,24 +142,24 @@ export abstract class Enemy extends Character {
 
     // State machine
     switch (this.aiState) {
-    case 'idle':
-      this.updateIdle(_delta);
-      break;
-    case 'patrol':
-      this.updatePatrol(_delta);
-      break;
-    case 'chase':
-      this.updateChase(_delta);
-      break;
-    case 'attack':
-      this.updateAttack(_delta);
-      break;
-    case 'flee':
-      this.updateFlee(_delta);
-      break;
-    case 'dead':
-      // Do nothing
-      break;
+      case 'idle':
+        this.updateIdle(_delta);
+        break;
+      case 'patrol':
+        this.updatePatrol(_delta);
+        break;
+      case 'chase':
+        this.updateChase(_delta);
+        break;
+      case 'attack':
+        this.updateAttack(_delta);
+        break;
+      case 'flee':
+        this.updateFlee(_delta);
+        break;
+      case 'dead':
+        // Do nothing
+        break;
     }
 
     // Update animation based on state
@@ -357,15 +357,15 @@ export abstract class Enemy extends Character {
 
     // On state exit/entry logic
     switch (newState) {
-    case 'patrol':
-      this.moveSpeed = this.aiConfig.patrolSpeed!;
-      break;
-    case 'chase':
-      this.moveSpeed = this.aiConfig.chaseSpeed!;
-      break;
-    case 'attack':
-      this.velocity.x = 0;
-      break;
+      case 'patrol':
+        this.moveSpeed = this.aiConfig.patrolSpeed!;
+        break;
+      case 'chase':
+        this.moveSpeed = this.aiConfig.chaseSpeed!;
+        break;
+      case 'attack':
+        this.velocity.x = 0;
+        break;
     }
   }
 

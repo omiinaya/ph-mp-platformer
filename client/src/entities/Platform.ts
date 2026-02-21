@@ -117,33 +117,33 @@ export class Platform extends GameObject {
     const distance = this.config.travelDistance!;
 
     switch (this.config.movement) {
-    case PlatformMovement.Horizontal:
-      this.x += this._moveDirection * speed * (delta / 1000);
-      if (Math.abs(this.x - this._originX) >= distance) {
-        this._moveDirection *= -1;
-      }
-      break;
-    case PlatformMovement.Vertical:
-      this.y += this._moveDirection * speed * (delta / 1000);
-      if (Math.abs(this.y - this._originY) >= distance) {
-        this._moveDirection *= -1;
-      }
-      break;
-    case PlatformMovement.Circular:
-      this._moveTimer += delta / 1000;
-      const radius = distance / 2;
-      this.x =
+      case PlatformMovement.Horizontal:
+        this.x += this._moveDirection * speed * (delta / 1000);
+        if (Math.abs(this.x - this._originX) >= distance) {
+          this._moveDirection *= -1;
+        }
+        break;
+      case PlatformMovement.Vertical:
+        this.y += this._moveDirection * speed * (delta / 1000);
+        if (Math.abs(this.y - this._originY) >= distance) {
+          this._moveDirection *= -1;
+        }
+        break;
+      case PlatformMovement.Circular:
+        this._moveTimer += delta / 1000;
+        const radius = distance / 2;
+        this.x =
           this._originX + Math.cos((this._moveTimer * speed) / radius) * radius;
-      this.y =
+        this.y =
           this._originY + Math.sin((this._moveTimer * speed) / radius) * radius;
-      break;
-    case PlatformMovement.Patrolling:
-      // Simple back‑and‑forth with pause at ends (simplified)
-      this.x += this._moveDirection * speed * (delta / 1000);
-      if (Math.abs(this.x - this._originX) >= distance) {
-        this._moveDirection *= -1;
-      }
-      break;
+        break;
+      case PlatformMovement.Patrolling:
+        // Simple back‑and‑forth with pause at ends (simplified)
+        this.x += this._moveDirection * speed * (delta / 1000);
+        if (Math.abs(this.x - this._originX) >= distance) {
+          this._moveDirection *= -1;
+        }
+        break;
     }
 
     // Update physics body position
